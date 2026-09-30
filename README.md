@@ -56,12 +56,12 @@ In the same Cloud project:
 
 ### 4. Railway
 
-1. **New Project → Deploy from GitHub repo →** `seansmohr/sales-kpi-dashboard`.
+1. **New Project → Deploy from GitHub repo →** `seansmohr/closeratedash`.
 2. In the project: **New → Database → PostgreSQL**.
 3. Open the app service: **Settings → Networking → Generate Domain**. That address is `PUBLIC_URL`
-   (for example `https://sales-kpi-dashboard-production.up.railway.app`).
+   (for example `https://closeratedash-production.up.railway.app`).
 4. Back in Google Cloud, add the authorized redirect URI `PUBLIC_URL/auth/callback`
-   (for example `https://sales-kpi-dashboard-production.up.railway.app/auth/callback`).
+   (for example `https://closeratedash-production.up.railway.app/auth/callback`).
 5. App service **Variables**:
 
    | Variable | Value |
