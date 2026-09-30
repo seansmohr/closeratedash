@@ -39,6 +39,8 @@ dashboard behind Google sign-in (jmohrins.com accounts only).
 - **The Production Sheet is the source of truth for closes and revenue.** Each application
   (client + agent + App Date) is one close for the agent in the sheet's Agent column. Products sold
   the same day are one close; an add-on sale on a later day is its own close in its own month.
+- **Weekly breakdown**: Monday-to-Sunday weeks that overlap the selected period, newest first
+  (`KPI.weekly`). Same rules as the monthly scorecard, just bucketed by week.
 - **Month = App Date** for sheet rows. GoHighLevel records have no app date, so they use the
   webinar date (`Date - Webinar Time/Date`), falling back to the contact's last update.
 - An application whose projected revenue nets to zero or less is **cancelled**: counts as held, not

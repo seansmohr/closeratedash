@@ -54,6 +54,32 @@
     <p class="note">Closes and revenue come from the Production Sheet: each client application, by App Date, is one close for the agent in the Agent column, so an add-on sale in a later month counts as its own close. Appointments with no sale come from GoHighLevel, attributed to the contact owner. Revenue per close averages each application; revenue per client adds up all of a client’s applications in the selected period. Cancelled policies count as held but not closed, and are left out of both revenue figures. A contact marked Sale in GoHighLevel that isn't on the sheet is treated as cancelled.</p>
   </section>
 
+  <section aria-labelledby="weekH">
+    <div class="section-head">
+      <h2 id="weekH">Weekly breakdown</h2>
+      <label class="control" for="weekAgent">Agent
+        <select id="weekAgent"><option value="">All agents</option></select>
+      </label>
+    </div>
+    <div class="panel scroll">
+      <table class="weekly" id="weeksTable">
+        <thead>
+          <tr>
+            <th>Week</th>
+            <th>Agent</th>
+            <th>Held</th>
+            <th>Close rate</th>
+            <th>Rev per close<small>projected · confirmed</small></th>
+            <th>Rev per client<small>projected · confirmed</small></th>
+            <th>Daily calls<small>avg per logged day</small></th>
+            <th>Confirmations<small>per next-day appt</small></th>
+          </tr>
+        </thead>
+      </table>
+    </div>
+    <p class="note">Weeks run Monday to Sunday. Sales are placed by App Date. Appointments without a sale are placed by webinar date, so one held a few days after its webinar can land in the week before.</p>
+  </section>
+
   <section aria-labelledby="mixH">
     <h2 id="mixH">What makes up “held”</h2>
     <div class="panel mix">

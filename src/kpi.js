@@ -137,9 +137,10 @@
     return ghl.map(g => (g.label && g.keys.some(k => sold.has(k)) ? { ...g, label: undefined } : g));
   }
 
-  const inRange = (d, from, to) => !!d && (!from || d.slice(0, 7) >= from) && (!to || d.slice(0, 7) <= to);
+  // Bounds are inclusive and may be 'YYYY-MM' (whole months) or 'YYYY-MM-DD' (exact days).
+  const inRange = (d, from, to) => !!d && (!from || d.slice(0, from.length) >= from) && (!to || d.slice(0, to.length) <= to);
 
-  // from/to are 'YYYY-MM' (inclusive) or null for no bound.
+  // from/to: 'YYYY-MM' or 'YYYY-MM-DD', inclusive, or null for no bound.
   function compute(prod, ghl, from, to) {
     const soldKeys = new Set(prod.flatMap(c => c.keys));
     const byAgent = {};
@@ -186,6 +187,31 @@
     return { rows, missing };
   }
 
+  // Calendar helpers on plain YYYY-MM-DD strings (UTC math, so no time zone drift).
+  const toDate = s => new Date(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)));
+  const fromDate = d => d.toISOString().slice(0, 10);
+  const addDays = (s, n) => { const d = toDate(s); d.setUTCDate(d.getUTCDate() + n); return fromDate(d); };
+  const mondayOf = s => { const d = toDate(s); return addDays(s, -((d.getUTCDay() + 6) % 7)); };
+  const monthEnd = ym => fromDate(new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 0)));
+
+  // Weeks run Monday to Sunday. Returns every week that overlaps the period
+  // (from/to as 'YYYY-MM' or null), newest first, each with the same rows
+  // compute() gives for a month. lastDay caps open-ended periods (use today).
+  function weekly(prod, ghl, from, to, lastDay) {
+    const dates = [...prod, ...ghl].map(r => r.date).filter(d => d && d >= '2026-01-01').sort();
+    if (!dates.length) return [];
+    let first = from ? from + '-01' : dates[0];
+    let last = to ? monthEnd(to) : dates[dates.length - 1];
+    if (lastDay && last > lastDay) last = lastDay;
+    if (first > last) return [];
+    const out = [];
+    for (let start = mondayOf(first); start <= last; start = addDays(start, 7)) {
+      const end = addDays(start, 6);
+      out.push({ start, end, rows: compute(prod, ghl, start, end).rows });
+    }
+    return out.reverse();
+  }
+
   function months(prod, ghl, since) {
     const s = new Set();
     for (const r of [...prod, ...ghl]) if (r.date && r.date.slice(0, 7) >= (since || '2026-01')) s.add(r.date.slice(0, 7));
@@ -193,5 +219,5 @@
   }
 
   return { AGENTS, AGENT_BY_ID, F_STATUS, F_WEBINAR, parseCsv, normalizeProd, normalizeProdRows, normalizeGhl,
-    stripMatchedLabels, compute, months, money, usDate };
+    stripMatchedLabels, compute, weekly, months, money, usDate, mondayOf, addDays };
 });

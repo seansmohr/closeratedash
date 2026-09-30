@@ -64,6 +64,52 @@
     $('banners').innerHTML = out.join('');
   }
 
+  function manualBetween(agent, start, end) {
+    const rows = entries.filter(e => e.agent === agent && e.date >= start && e.date <= end);
+    const callDays = rows.filter(e => Number.isFinite(e.calls));
+    const confRows = rows.filter(e => Number.isFinite(e.appts) && e.appts > 0 && Number.isFinite(e.confirms));
+    const appts = confRows.reduce((s, e) => s + e.appts, 0);
+    return {
+      calls: callDays.length ? callDays.reduce((s, e) => s + e.calls, 0) / callDays.length : null,
+      conf: appts ? confRows.reduce((s, e) => s + e.confirms, 0) / appts : null,
+    };
+  }
+  // Weekly breakdown: one row per agent per week, newest week first.
+  const fmtDay = s => `${MONTHS[+s.slice(5, 7) - 1]} ${+s.slice(8, 10)}`;
+  function renderWeekly(countBlank) {
+    const [from, to] = range();
+    const pick = $('weekAgent').value;
+    const agents = pick ? [pick] : KPI.AGENTS;
+    const weeks = KPI.weekly(data.prod, data.ghl, from, to, todayIso());
+    const table = $('weeksTable');
+    table.querySelectorAll('tbody').forEach(n => n.remove());
+    if (!weeks.length) { table.insertAdjacentHTML('beforeend', '<tbody><tr><td colspan="8" class="muted">No activity in this period.</td></tr></tbody>'); return; }
+    table.insertAdjacentHTML('beforeend', weeks.map(w => {
+      const byAgent = Object.fromEntries(w.rows.map(r => [r.agent, r]));
+      const lines = agents.map(agent => {
+        const r = byAgent[agent];
+        const m = manualBetween(agent, w.start, w.end);
+        if (!r && m.calls == null && m.conf == null) return null;
+        const held = r ? (countBlank ? r.held : r.held - r.blank) : 0;
+        const closes = r ? r.closes : 0;
+        const rate = held ? closes / held : null;
+        const conf = r && r.closes ? `<span class="sub">${fmtMoney(r.confPerClose)} confirmed</span>` : '';
+        const confC = r && r.clients ? `<span class="sub">${fmtMoney(r.confPerClient)} confirmed</span>` : '';
+        const confCls = m.conf == null ? '' : m.conf >= 3 ? 'good' : m.conf >= 2 ? 'warn' : 'bad';
+        return `<td>${agent}</td>
+          <td class="num">${held}</td>
+          <td class="num">${fmtPct(rate)}<span class="sub">${closes} of ${held}</span></td>
+          <td class="num">${fmtMoney(r && r.projPerClose)}${conf}</td>
+          <td class="num">${fmtMoney(r && r.projPerClient)}${confC}</td>
+          <td class="num">${m.calls == null ? '—' : Math.round(m.calls)}</td>
+          <td class="num">${m.conf == null ? '—' : `<span class="pill ${confCls}">${m.conf.toFixed(1)}</span>`}</td>`;
+      }).filter(Boolean);
+      const label = `<th scope="rowgroup" rowspan="${Math.max(lines.length, 1)}" class="wk-label">${fmtDay(w.start)} – ${fmtDay(w.end)}</th>`;
+      if (!lines.length) return `<tbody class="wk"><tr>${label}<td colspan="7" class="muted">No activity</td></tr></tbody>`;
+      return `<tbody class="wk">${lines.map((l, i) => `<tr>${i === 0 ? label : ''}${l}</tr>`).join('')}</tbody>`;
+    }).join(''));
+  }
+
   function render() {
     renderBanners();
     const [from, to] = range();
@@ -88,6 +134,8 @@
         <td><span class="big">${m.conf == null ? '—' : m.conf.toFixed(1)}</span><span class="sub">${m.appts ? m.appts + ' appts' : '&nbsp;'}</span>${confPill}</td>
       </tr>`;
     }).join('');
+
+    renderWeekly(countBlank);
 
     // What makes up "held"
     const maxHeld = Math.max(1, ...KPI.AGENTS.map(a => (byAgent[a] && byAgent[a].held) || 0));
@@ -140,6 +188,8 @@
 
   $('period').addEventListener('change', render);
   $('countBlank').addEventListener('change', render);
+  $('weekAgent').insertAdjacentHTML('beforeend', KPI.AGENTS.map(a => `<option>${a}</option>`).join(''));
+  $('weekAgent').addEventListener('change', render);
 
   $('refresh').addEventListener('click', async () => {
     const btn = $('refresh'), st = $('liveStatus');

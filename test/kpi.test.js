@@ -143,3 +143,27 @@ test('revenue per client adds up each client\u2019s applications in the period; 
   assert.equal(sep.clients, 2);
   assert.equal(sep.projPerClient, 450);
 });
+
+test('weekly breakdown uses Monday-to-Sunday weeks that overlap the month, newest first', () => {
+  const prod = KPI.normalizeProdRows([HEAD,
+    row('Sai', 'Tia Vance', '$500.00', '', '9/6/2026', '15551110030'),   // Sunday: week of Aug 31
+    row('Sai', 'Uma Webb', '$700.00', '', '9/8/2026', '15551110031'),    // Monday: week of Sep 7
+    row('Sai', 'Val Xu', '$300.00', '', '9/30/2026', '15551110032'),     // Wednesday: week of Sep 28
+  ]);
+  const ghl = KPI.normalizeGhl([contact('Wes', 'Yee', '+15551110033', SAI, 'Showed', '2026-09-09')], TODAY);
+  const weeks = KPI.weekly(prod, ghl, '2026-09', '2026-09');
+  assert.deepEqual(weeks.map(w => w.start), ['2026-09-28', '2026-09-21', '2026-09-14', '2026-09-07', '2026-08-31']);
+  const wk = s => weeks.find(w => w.start === s).rows[0];
+  assert.equal(wk('2026-08-31').closes, 1);
+  assert.equal(wk('2026-09-07').closes, 1);
+  assert.equal(wk('2026-09-07').held, 2);
+  assert.equal(wk('2026-09-07').closeRate, 0.5);
+  assert.equal(wk('2026-09-28').projPerClose, 300);
+  assert.equal(KPI.mondayOf('2026-09-30'), '2026-09-28');
+});
+
+test('day bounds work in compute', () => {
+  const prod = KPI.normalizeProdRows([HEAD, row('Sean', 'Xan Zed', '$400.00', '', '9/13/2026', '15551110034')]);
+  assert.equal(KPI.compute(prod, [], '2026-09-07', '2026-09-13').rows[0].closes, 1);
+  assert.equal(KPI.compute(prod, [], '2026-09-14', '2026-09-20').rows.length, 0);
+});
