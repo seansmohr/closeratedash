@@ -89,9 +89,10 @@
       const pk = phoneKey(r[C.phone]);
       const nk = nameKey(parts[0], parts[parts.length - 1]);
       const d = usDate(r[C.date]);
-      const id = agent + ':' + (pk || nk || hash(client.toLowerCase())) + ':' + (d || 'nodate');
+      const clientId = agent + ':' + (pk || nk || hash(client.toLowerCase()));
+      const id = clientId + ':' + (d || 'nodate');
       let c = apps.get(id);
-      if (!c) { c = { agent, keys: [], proj: 0, conf: 0, date: d }; apps.set(id, c); }
+      if (!c) { c = { agent, client: hash(clientId), keys: [], proj: 0, conf: 0, date: d }; apps.set(id, c); }
       for (const k of [pk, nk]) if (k && !c.keys.includes(k)) c.keys.push(k);
       c.proj += money(r[C.proj]);
       c.conf += money(r[C.rev]);
@@ -143,13 +144,15 @@
     const soldKeys = new Set(prod.flatMap(c => c.keys));
     const byAgent = {};
     const get = a => byAgent[a] || (byAgent[a] = { agent: a, sheetClients: 0, cancelled: 0, showed: 0,
-      blank: 0, proj: 0, conf: 0 });
+      blank: 0, proj: 0, conf: 0, clientSet: new Set() });
     const missing = [];
     for (const c of prod) {
       if (!inRange(c.date, from, to)) continue;
       const a = get(c.agent);
-      if (c.proj > 0) { a.sheetClients++; a.proj += c.proj; a.conf += Math.max(c.conf, 0); }
-      else a.cancelled++; // net zero or negative: the application cancelled
+      if (c.proj > 0) {
+        a.sheetClients++; a.proj += c.proj; a.conf += Math.max(c.conf, 0);
+        a.clientSet.add(c.client);
+      } else a.cancelled++; // net zero or negative: the application cancelled
     }
     for (const g of ghl) {
       if (!inRange(g.date, from, to)) continue;
@@ -164,13 +167,18 @@
         missing.push({ agent: g.agent, name: g.label, status: g.status, date: g.date });
       }
     }
-    const rows = Object.values(byAgent).map(a => {
+    const rows = Object.values(byAgent).map(({ clientSet, ...a }) => {
       const closes = a.sheetClients;
+      const clients = clientSet.size;
       const held = closes + a.cancelled + a.showed + a.blank;
-      return { ...a, closes, held,
+      return { ...a, closes, clients, held,
         closeRate: held ? closes / held : null,
-        projPerClient: a.sheetClients ? a.proj / a.sheetClients : null,
-        confPerClient: a.sheetClients ? a.conf / a.sheetClients : null };
+        // Revenue per close: average size of one application.
+        projPerClose: closes ? a.proj / closes : null,
+        confPerClose: closes ? a.conf / closes : null,
+        // Revenue per client: all of a client's applications in the period, per distinct client.
+        projPerClient: clients ? a.proj / clients : null,
+        confPerClient: clients ? a.conf / clients : null };
     });
     const order = x => { const i = AGENTS.indexOf(x.agent); return i < 0 ? 99 : i; };
     rows.sort((x, y) => order(x) - order(y));

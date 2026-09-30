@@ -72,20 +72,19 @@
     const byAgent = Object.fromEntries(rows.map(r => [r.agent, r]));
 
     $('score').innerHTML = KPI.AGENTS.map(agent => {
-      const r = byAgent[agent] || { held: 0, closes: 0, blank: 0, sheetClients: 0, projPerClient: null, confPerClient: null };
+      const r = byAgent[agent] || { held: 0, closes: 0, clients: 0, blank: 0, projPerClose: null, confPerClose: null, projPerClient: null, confPerClient: null };
       const held = countBlank ? r.held : r.held - r.blank;
       const rate = held ? r.closes / held : null;
       const m = manualFor(agent);
       let confPill = '<span class="pill none">Not logged</span>';
       if (m.conf != null) confPill = m.conf >= 3 ? '<span class="pill good">At ideal</span>' : m.conf >= 2 ? '<span class="pill warn">At minimum</span>' : '<span class="pill bad">Below minimum</span>';
-      const pending = r.projPerClient && r.confPerClient != null ? r.projPerClient - r.confPerClient : null;
       return `<tr>
         <td class="agent">${agent}</td>
         <td><span class="big">${m.calls == null ? '—' : Math.round(m.calls)}</span><span class="sub">${m.callDays ? m.callDays + ' day' + (m.callDays > 1 ? 's' : '') + ' logged' : 'Not logged'}</span></td>
         <td><span class="big">${held}</span><span class="sub">${r.blank && countBlank ? r.blank + ' unmarked' : '&nbsp;'}</span></td>
         <td><span class="big">${fmtPct(rate)}</span><span class="sub">${r.closes} of ${held}</span></td>
-        <td><span class="big">${fmtMoney(r.projPerClient)}</span><span class="sub">${r.sheetClients} client${r.sheetClients === 1 ? '' : 's'}</span></td>
-        <td><span class="big">${fmtMoney(r.confPerClient)}</span><span class="sub">${pending != null && pending > 0.5 ? fmtMoney(pending) + ' per client pending' : '&nbsp;'}</span></td>
+        <td><span class="big">${fmtMoney(r.projPerClose)}</span><span class="sub">${r.closes ? fmtMoney(r.confPerClose) + ' confirmed' : '&nbsp;'}</span><span class="sub">${r.closes} close${r.closes === 1 ? '' : 's'}</span></td>
+        <td><span class="big">${fmtMoney(r.projPerClient)}</span><span class="sub">${r.clients ? fmtMoney(r.confPerClient) + ' confirmed' : '&nbsp;'}</span><span class="sub">${r.clients} client${r.clients === 1 ? '' : 's'}</span></td>
         <td><span class="big">${m.conf == null ? '—' : m.conf.toFixed(1)}</span><span class="sub">${m.appts ? m.appts + ' appts' : '&nbsp;'}</span>${confPill}</td>
       </tr>`;
     }).join('');

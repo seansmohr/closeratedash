@@ -27,11 +27,11 @@ test('products sold on the same App Date are one close; a later App Date is a se
   assert.equal(prod.length, 2);
   const aug = KPI.compute(prod, [], '2026-08', '2026-08').rows[0];
   assert.equal(aug.closes, 1);
-  assert.equal(aug.projPerClient, 700);
-  assert.equal(aug.confPerClient, 500);
+  assert.equal(aug.projPerClose, 700);
+  assert.equal(aug.confPerClose, 500);
   const sep = KPI.compute(prod, [], '2026-09', '2026-09').rows[0];
   assert.equal(sep.closes, 1);
-  assert.equal(sep.projPerClient, 300);
+  assert.equal(sep.projPerClose, 300);
 });
 
 test('a fully cancelled application counts as held but not closed, and stays out of revenue per client', () => {
@@ -44,6 +44,7 @@ test('a fully cancelled application counts as held but not closed, and stays out
   assert.equal(r.cancelled, 1);
   assert.equal(r.held, 2);
   assert.equal(r.closeRate, 0.5);
+  assert.equal(r.projPerClose, 800);
   assert.equal(r.projPerClient, 800);
 });
 
@@ -124,4 +125,21 @@ test('money and dates parse the formats the sheet uses', () => {
 
 test('a sheet missing a required column fails loudly', () => {
   assert.throws(() => KPI.normalizeProdRows([['Agent', 'Client'], ['Sai', 'X Y']]), /missing column/);
+});
+
+test('revenue per client adds up each client\u2019s applications in the period; per close averages each one', () => {
+  const prod = KPI.normalizeProdRows([HEAD,
+    row('Sai', 'Rae Tate', '$900.00', '$900.00', '8/3/2026', '15551110020'),
+    row('Sai', 'Rae Tate', '$300.00', '', '9/14/2026', '15551110020'),
+    row('Sai', 'Sy Ueda', '$600.00', '$600.00', '9/2/2026', '15551110021'),
+  ]);
+  const year = KPI.compute(prod, [], null, null).rows[0];
+  assert.equal(year.closes, 3);
+  assert.equal(year.clients, 2);
+  assert.equal(year.projPerClose, 600);
+  assert.equal(year.projPerClient, 900);
+  assert.equal(year.confPerClient, 750);
+  const sep = KPI.compute(prod, [], '2026-09', '2026-09').rows[0];
+  assert.equal(sep.clients, 2);
+  assert.equal(sep.projPerClient, 450);
 });

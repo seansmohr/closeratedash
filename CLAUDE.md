@@ -28,7 +28,9 @@ dashboard behind Google sign-in (jmohrins.com accounts only).
    reading call logs through the API). Shown as the average per logged day.
 2. **Held appointments**
 3. **Close rate** = closes ÷ held
-4. **Revenue per client**: projected and confirmed, both shown. Average per close.
+4. **Revenue per close and revenue per client**, each projected and confirmed. Per close averages
+   each application. Per client adds up all of a client's applications in the selected period and
+   divides by distinct clients, so a client who buys an add-on later is worth more than one close.
 5. **Day-before confirmation calls**: entered by hand. Confirmation calls ÷ next-day appointments.
    Goal 2, ideal 3.
 
