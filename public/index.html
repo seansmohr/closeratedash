@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mohr Sales KPIs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="head-text">
+      <span class="eyebrow">Mohr Insurance Services</span>
+      <h1>Sales KPIs</h1>
+      <div class="fresh">
+        <span id="fresh">Loading data…</span>
+        <span id="liveStatus" class="status" role="status" aria-live="polite"></span>
+      </div>
+    </div>
+    <div class="controls">
+      <label class="control" for="period">Period
+        <select id="period"></select>
+      </label>
+      <button class="btn" id="refresh" type="button">Refresh now</button>
+    </div>
+  </header>
+  <div class="userbar"><span id="who"></span><a href="/auth/logout">Sign out</a></div>
+  <div id="banners"></div>
+
+  <section aria-labelledby="scoreH">
+    <div class="section-head">
+      <h2 id="scoreH">Agent scorecard</h2>
+      <label class="toggle" for="countBlank"><input type="checkbox" id="countBlank" checked> Count unmarked bookings as held</label>
+    </div>
+    <div class="panel scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Agent</th>
+            <th>Daily calls<small>avg per logged day</small></th>
+            <th>Held appts</th>
+            <th>Close rate<small>closes ÷ held</small></th>
+            <th>Rev per client<small>projected</small></th>
+            <th>Rev per client<small>confirmed</small></th>
+            <th>Confirmation calls<small>per next-day appt · goal 2, ideal 3</small></th>
+          </tr>
+        </thead>
+        <tbody id="score"></tbody>
+      </table>
+    </div>
+    <p class="note">Closes and revenue come from the Production Sheet: each client application, by App Date, is one close for the agent in the Agent column, so an add-on sale in a later month counts as its own close. Appointments with no sale come from GoHighLevel, attributed to the contact owner. Cancelled policies count as held but not closed, and are left out of revenue per client. A contact marked Sale in GoHighLevel that isn't on the sheet is treated as cancelled.</p>
+  </section>
+
+  <section aria-labelledby="mixH">
+    <h2 id="mixH">What makes up “held”</h2>
+    <div class="panel mix">
+      <div id="mix"></div>
+      <div class="legend">
+        <span><i class="k-sale"></i>Sold</span>
+        <span><i class="k-cxl"></i>Sold, then cancelled</span>
+        <span><i class="k-showed"></i>Marked Showed, no sale</span>
+        <span><i class="k-blank"></i>Booked, status left blank</span>
+      </div>
+    </div>
+    <p class="note" id="mixNote"></p>
+  </section>
+
+  <section aria-labelledby="logH">
+    <h2 id="logH">Daily log: calls and confirmations</h2>
+    <div class="log">
+      <form class="panel entry" id="entryForm" novalidate>
+        <div class="row2">
+          <label for="fDate">Day<input type="date" id="fDate" required></label>
+          <label for="fAgent">Agent<select id="fAgent"></select></label>
+        </div>
+        <label for="fCalls">Calls made<input type="number" id="fCalls" min="0" step="1" inputmode="numeric" placeholder="From GoHighLevel call report"></label>
+        <div class="row2">
+          <label for="fAppts">Next-day appts<input type="number" id="fAppts" min="0" step="1" inputmode="numeric"></label>
+          <label for="fConf">Confirmation calls<input type="number" id="fConf" min="0" step="1" inputmode="numeric"></label>
+        </div>
+        <span class="hint">Saving the same day and agent again replaces that entry.</span>
+        <div class="form-actions">
+          <button class="btn" type="submit" id="saveBtn">Save day</button>
+          <span id="formStatus" class="muted" role="status" aria-live="polite"></span>
+        </div>
+      </form>
+      <div class="panel entries scroll">
+        <table>
+          <thead><tr><th>Day</th><th>Agent</th><th>Calls</th><th>Next-day appts</th><th>Confirmations</th><th></th></tr></thead>
+          <tbody id="entries"></tbody>
+        </table>
+        <div class="empty" id="entriesEmpty">No days logged in this period yet. Pull each agent’s call count from GoHighLevel and save it here; the scorecard picks it up right away.</div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="cleanH">
+    <h2 id="cleanH">Needs cleanup</h2>
+    <div class="panel cleanup" id="cleanup"></div>
+  </section>
+</div>
+<script src="/kpi.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
