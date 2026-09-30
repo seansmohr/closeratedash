@@ -27,8 +27,10 @@ const config = {
   },
 
   auth: {
-    // "google" (default) or "dev". dev skips sign-in and is refused in production.
-    mode: env.AUTH_MODE || 'google',
+    // "google", "password" or "dev". Setting DASHBOARD_PASSWORD picks "password": one shared
+    // password the browser asks for. dev skips sign-in and is refused in production.
+    mode: env.AUTH_MODE || (env.DASHBOARD_PASSWORD ? 'password' : 'google'),
+    password: env.DASHBOARD_PASSWORD || '',
     clientId: env.GOOGLE_CLIENT_ID || '',
     clientSecret: env.GOOGLE_CLIENT_SECRET || '',
     allowedDomain: (env.ALLOWED_DOMAIN || 'jmohrins.com').toLowerCase(),
@@ -48,7 +50,9 @@ function assertConfig() {
       if (!config.auth[k]) problems.push(`Missing ${{ clientId: 'GOOGLE_CLIENT_ID', clientSecret: 'GOOGLE_CLIENT_SECRET', publicUrl: 'PUBLIC_URL', sessionSecret: 'SESSION_SECRET' }[k]}`);
     }
     if (config.auth.sessionSecret && config.auth.sessionSecret.length < 32) problems.push('SESSION_SECRET must be at least 32 characters');
+    if (problems.length) problems.push('(Or skip Google sign-in: set DASHBOARD_PASSWORD instead of the settings above)');
   }
+  if (config.auth.mode === 'password' && !config.auth.password) problems.push('Missing DASHBOARD_PASSWORD');
   if (config.isProd && !config.databaseUrl) problems.push('Missing DATABASE_URL (add a Postgres database in Railway)');
   if (!config.demoData) {
     if (!config.ghl.token) problems.push('Missing GHL_TOKEN');

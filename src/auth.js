@@ -15,6 +15,27 @@ function mount(app) {
     return;
   }
 
+  if (config.auth.mode === 'password') {
+    // HTTP Basic auth: the browser asks once and remembers it. Any user name works; it's
+    // recorded as who saved a daily log entry.
+    const expected = crypto.createHash('sha256').update(config.auth.password).digest();
+    app.use((req, res, next) => {
+      const m = /^Basic (.+)$/.exec(req.get('authorization') || '');
+      const decoded = m ? Buffer.from(m[1], 'base64').toString('utf8') : '';
+      const i = decoded.indexOf(':');
+      const given = crypto.createHash('sha256').update(i >= 0 ? decoded.slice(i + 1) : '').digest();
+      if (i >= 0 && crypto.timingSafeEqual(given, expected)) {
+        const name = decoded.slice(0, i).trim().slice(0, 60) || 'team';
+        req.user = { email: name, name };
+        return next();
+      }
+      res.set('WWW-Authenticate', 'Basic realm="Mohr Sales KPIs", charset="UTF-8"');
+      res.status(401).send('Enter the dashboard password.');
+    });
+    app.get('/auth/logout', (req, res) => res.redirect('/'));
+    return;
+  }
+
   app.get('/auth/login', (req, res) => {
     const state = crypto.randomBytes(16).toString('hex');
     req.session.oauthState = state;

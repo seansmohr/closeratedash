@@ -18,7 +18,8 @@ dashboard behind Google sign-in (jmohrins.com accounts only).
 - `src/sheet.js`: Google Sheets values API with a service account
 - `src/refresh.js`: scheduled pull; keeps the last good data per source in memory
 - `src/store.js`: Postgres `daily_log` table (manual calls and confirmation counts)
-- `src/auth.js`: Google OAuth, restricted to `ALLOWED_DOMAIN`
+- `src/auth.js`: Google OAuth, restricted to `ALLOWED_DOMAIN`; or one shared password (HTTP Basic)
+  when `DASHBOARD_PASSWORD` is set
 - `public/`: `index.html`, `app.js`, `styles.css`, sign-in page
 - `test/fixtures/demo.js`: invented demo data. Never put real client data in the repo.
 

@@ -70,7 +70,8 @@ In the same Cloud project:
    | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
    | `GHL_TOKEN` | from step 1 |
    | `GOOGLE_SERVICE_ACCOUNT_JSON` | from step 2 |
-   | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | from step 3 |
+   | `DASHBOARD_PASSWORD` | optional: a shared password instead of Google sign-in. With it set, skip step 3 and the three rows below |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | from step 3 |
    | `PUBLIC_URL` | from step 4.3, no trailing slash |
    | `SESSION_SECRET` | run `openssl rand -hex 32` and paste the result |
 
