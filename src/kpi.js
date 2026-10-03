@@ -92,8 +92,9 @@
       const clientId = agent + ':' + (pk || nk || hash(client.toLowerCase()));
       const id = clientId + ':' + (d || 'nodate');
       let c = apps.get(id);
-      if (!c) { c = { agent, client: hash(clientId), keys: [], proj: 0, conf: 0, date: d }; apps.set(id, c); }
+      if (!c) { c = { agent, client: hash(clientId), keys: [], phone: null, proj: 0, conf: 0, date: d }; apps.set(id, c); }
       for (const k of [pk, nk]) if (k && !c.keys.includes(k)) c.keys.push(k);
+      if (!c.phone && pk) c.phone = pk; // matches the application to a same-day appointment
       c.proj += money(r[C.proj]);
       c.conf += money(r[C.rev]);
     }
@@ -148,8 +149,8 @@
   // Cancel/Reschedule is left out too.
   function normalizeAppointments(events, contacts, today, timeZone) {
     const statusById = new Map((contacts || []).map(c => [c.id, contactStatus(c)]));
-    // Hashed match keys, so sheet sales can be paired with appointments (addSheetSales).
-    const keysById = new Map((contacts || []).map(c => [c.id, [phoneKey(c.phone), nameKey(c.firstName, c.lastName)].filter(Boolean)]));
+    // Hashed phone, so sheet applications can be paired with appointments (addSheetSales).
+    const phoneById = new Map((contacts || []).map(c => [c.id, phoneKey(c.phone)]));
     const seen = new Set();
     const list = [];
     for (const e of events || []) {
@@ -177,7 +178,7 @@
         else if (/^(Showed|Sale|Cancell?ed)/i.test(st)) outcome = 'held';
         else outcome = 'unmarked';
       }
-      out.push({ agent: a.agent, date: a.date, outcome, keys: keysById.get(a.contact) || [] });
+      out.push({ agent: a.agent, date: a.date, outcome, phone: phoneById.get(a.contact) || null });
     }
     return out;
   }
@@ -192,37 +193,32 @@
   // Bounds are inclusive and may be 'YYYY-MM' (whole months) or 'YYYY-MM-DD' (exact days).
   const inRange = (d, from, to) => !!d && (!from || d.slice(0, from.length) >= from) && (!to || d.slice(0, to.length) <= to);
 
-  // Every sale on the Production Sheet means an appointment was held, and that
-  // appointment belongs to the App Date's week and the sheet's agent, so a sale
-  // and its appointment always land in the same period. Each application is
-  // paired with one attended (held or unmarked) calendar appointment for the
-  // same client, from 30 days before its App Date to 7 days after; the closest
-  // one on or before the App Date wins, and each appointment covers one
-  // application. The paired appointment is moved to the App Date and the sheet's
-  // agent and counts as held. An application with no such appointment adds a
-  // held appointment on its App Date. Returns appointments without match keys.
+  // Every application on the Production Sheet is a held appointment on its App
+  // Date. If the client (matched by the sheet's phone number, last 10 digits)
+  // has a GoHighLevel appointment that same day, that appointment is the one:
+  // it counts as held even if marked No Show, and goes to the sheet's agent.
+  // Otherwise the application adds a held appointment on its App Date. Each
+  // appointment covers one application. Appointments never change day.
+  // Returns the appointments without match keys, plus the added ones.
   function addSheetSales(prod, appts) {
-    const byKey = new Map();
+    const byDay = new Map();
     appts.forEach((a, i) => {
-      if (a.outcome === 'noshow') return;
-      for (const k of a.keys || []) { if (!byKey.has(k)) byKey.set(k, []); byKey.get(k).push(i); }
+      if (!a.phone) return;
+      const k = a.phone + '|' + a.date;
+      if (!byDay.has(k)) byDay.set(k, []);
+      byDay.get(k).push(i);
     });
-    const used = new Map(); // appointment index -> the sale it's paired with
+    const paired = new Map(); // appointment index -> application
     const added = [];
-    const sales = prod.filter(c => c.date).sort((x, y) => x.date.localeCompare(y.date));
-    for (const c of sales) {
-      const lo = addDays(c.date, -30), hi = addDays(c.date, 7);
-      const cands = [...new Set(c.keys.flatMap(k => byKey.get(k) || []))]
-        .filter(i => !used.has(i) && appts[i].date >= lo && appts[i].date <= hi);
-      const before = cands.filter(i => appts[i].date <= c.date).sort((i, j) => appts[j].date.localeCompare(appts[i].date));
-      const after = cands.filter(i => appts[i].date > c.date).sort((i, j) => appts[i].date.localeCompare(appts[j].date));
-      const pick = before.length ? before[0] : after[0];
-      if (pick !== undefined) used.set(pick, c);
+    for (const c of prod) {
+      if (!c.date) continue;
+      const pick = c.phone ? (byDay.get(c.phone + '|' + c.date) || []).find(i => !paired.has(i)) : undefined;
+      if (pick !== undefined) paired.set(pick, c);
       else added.push({ agent: c.agent, date: c.date, outcome: 'held', sheetOnly: true });
     }
-    return [...appts.map(({ keys, ...a }, i) => {
-      const sale = used.get(i);
-      return sale ? { ...a, agent: sale.agent, date: sale.date, outcome: 'held' } : a;
+    return [...appts.map(({ phone, ...a }, i) => {
+      const app = paired.get(i);
+      return app ? { ...a, agent: app.agent, outcome: 'held' } : a;
     }), ...added];
   }
 

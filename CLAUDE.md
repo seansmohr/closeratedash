@@ -57,13 +57,12 @@ dashboard behind Google sign-in (jmohrins.com accounts only).
     `No Show…` → no-show; `Showed…`, `Sale…`, `Cancelled` → held; `Cancel/Reschedule` → not booked
   - anything else (still `confirmed`, status blank or on an earlier appointment): held, "unmarked";
     the dashboard has a toggle to exclude these
-  - **Every sheet sale is a held appointment in its App Date's week** (`KPI.addSheetSales`): each
-    application is paired with one attended (held or unmarked) appointment for the same client
-    (hashed phone or name), from 30 days before its App Date to 7 days after, closest on or before
-    the App Date first. The paired appointment moves to the App Date and the sheet's agent and
-    counts as held. An application with no such appointment (phone sale, add-on, only a no-show)
-    adds a held appointment there. Cancelled applications count too. So closes ≤ held in every
-    week and month.
+  - **Every sheet application is a held appointment on its App Date** (`KPI.addSheetSales`,
+    agreed with Sean): match the sheet's phone number (last 10 digits, hashed) to a GoHighLevel
+    appointment **on the App Date**. If there is one, it's held (even if marked No Show) and goes to
+    the sheet's agent. If not (no appointment that day, or no phone on the sheet), add a held
+    appointment for the sheet's agent on the App Date. One appointment per application; cancelled
+    applications count too; appointments never change day. So closes ≤ held in every period.
   - held = marked held + unmarked + sheet-only sales; booked = held + no-shows.
 - **GoHighLevel contacts** supply the Appointment Status above and the Needs cleanup list: a contact
   marked `Sale (…)` with no sheet match (phone last 10 digits, or first+last name) is listed there
