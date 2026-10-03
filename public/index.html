@@ -42,6 +42,7 @@
             <th>Agent</th>
             <th>Daily calls<small>avg per logged day</small></th>
             <th>Held appts</th>
+            <th>Show rate<small>held ÷ booked</small></th>
             <th>Close rate<small>closes ÷ held</small></th>
             <th>Rev per close<small>projected · confirmed</small></th>
             <th>Rev per client<small>projected · confirmed</small></th>
@@ -51,7 +52,7 @@
         <tbody id="score"></tbody>
       </table>
     </div>
-    <p class="note">Closes and revenue come from the Production Sheet: each client application, by App Date, is one close for the agent in the Agent column, so an add-on sale in a later month counts as its own close. Appointments with no sale come from GoHighLevel, attributed to the contact owner. Revenue per close averages each application; revenue per client adds up all of a client’s applications in the selected period. Cancelled policies count as held but not closed, and are left out of both revenue figures. A contact marked Sale in GoHighLevel that isn't on the sheet is treated as cancelled.</p>
+    <p class="note">Closes and revenue come from the Production Sheet: each client application, by App Date, is one close for the agent in the Agent column, so an add-on sale in a later month counts as its own close. Appointments with no sale come from GoHighLevel, attributed to the contact owner. Revenue per close averages each application; revenue per client adds up all of a client’s applications in the selected period. Cancelled policies count as held but not closed, and are left out of both revenue figures. A contact marked Sale in GoHighLevel that isn't on the sheet is treated as cancelled. Show rate is held ÷ booked, where booked is held plus contacts marked No Show (No Show, No Show 2, No Show - Veteran); Cancel/Reschedule isn't counted as booked.</p>
   </section>
 
   <section aria-labelledby="weekH">
@@ -68,6 +69,7 @@
             <th>Week</th>
             <th>Agent</th>
             <th>Held</th>
+            <th>Show rate<small>held ÷ booked</small></th>
             <th>Close rate</th>
             <th>Rev per close<small>projected · confirmed</small></th>
             <th>Rev per client<small>projected · confirmed</small></th>

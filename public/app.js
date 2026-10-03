@@ -8,6 +8,12 @@
   const monthLabel = m => `${MONTHS[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}`;
   const fmtMoney = n => n == null ? '—' : '$' + Math.round(n).toLocaleString('en-US');
   const fmtPct = n => n == null ? '—' : Math.round(n * 100) + '%';
+  // Held and booked, with or without unmarked bookings (the "Count unmarked" toggle).
+  const counts = (r, countBlank) => {
+    const held = r ? (countBlank ? r.held : r.held - r.blank) : 0;
+    const booked = held + (r ? r.noShow : 0);
+    return { held, booked, show: booked ? held / booked : null };
+  };
   const fmtTime = iso => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   const todayIso = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -83,14 +89,14 @@
     const weeks = KPI.weekly(data.prod, data.ghl, from, to, todayIso());
     const table = $('weeksTable');
     table.querySelectorAll('tbody').forEach(n => n.remove());
-    if (!weeks.length) { table.insertAdjacentHTML('beforeend', '<tbody><tr><td colspan="8" class="muted">No activity in this period.</td></tr></tbody>'); return; }
+    if (!weeks.length) { table.insertAdjacentHTML('beforeend', '<tbody><tr><td colspan="9" class="muted">No activity in this period.</td></tr></tbody>'); return; }
     table.insertAdjacentHTML('beforeend', weeks.map(w => {
       const byAgent = Object.fromEntries(w.rows.map(r => [r.agent, r]));
       const lines = agents.map(agent => {
         const r = byAgent[agent];
         const m = manualBetween(agent, w.start, w.end);
         if (!r && m.calls == null && m.conf == null) return null;
-        const held = r ? (countBlank ? r.held : r.held - r.blank) : 0;
+        const { held, booked, show } = counts(r, countBlank);
         const closes = r ? r.closes : 0;
         const rate = held ? closes / held : null;
         const conf = r && r.closes ? `<span class="sub">${fmtMoney(r.confPerClose)} confirmed</span>` : '';
@@ -98,6 +104,7 @@
         const confCls = m.conf == null ? '' : m.conf >= 3 ? 'good' : m.conf >= 2 ? 'warn' : 'bad';
         return `<td>${agent}</td>
           <td class="num">${held}</td>
+          <td class="num">${fmtPct(show)}<span class="sub">${held} of ${booked}</span></td>
           <td class="num">${fmtPct(rate)}<span class="sub">${closes} of ${held}</span></td>
           <td class="num">${fmtMoney(r && r.projPerClose)}${conf}</td>
           <td class="num">${fmtMoney(r && r.projPerClient)}${confC}</td>
@@ -105,7 +112,7 @@
           <td class="num">${m.conf == null ? '—' : `<span class="pill ${confCls}">${m.conf.toFixed(1)}</span>`}</td>`;
       }).filter(Boolean);
       const label = `<th scope="rowgroup" rowspan="${Math.max(lines.length, 1)}" class="wk-label">${fmtDay(w.start)} – ${fmtDay(w.end)}</th>`;
-      if (!lines.length) return `<tbody class="wk"><tr>${label}<td colspan="7" class="muted">No activity</td></tr></tbody>`;
+      if (!lines.length) return `<tbody class="wk"><tr>${label}<td colspan="8" class="muted">No activity</td></tr></tbody>`;
       return `<tbody class="wk">${lines.map((l, i) => `<tr>${i === 0 ? label : ''}${l}</tr>`).join('')}</tbody>`;
     }).join(''));
   }
@@ -118,8 +125,8 @@
     const byAgent = Object.fromEntries(rows.map(r => [r.agent, r]));
 
     $('score').innerHTML = KPI.AGENTS.map(agent => {
-      const r = byAgent[agent] || { held: 0, closes: 0, clients: 0, blank: 0, projPerClose: null, confPerClose: null, projPerClient: null, confPerClient: null };
-      const held = countBlank ? r.held : r.held - r.blank;
+      const r = byAgent[agent] || { held: 0, closes: 0, clients: 0, blank: 0, noShow: 0, projPerClose: null, confPerClose: null, projPerClient: null, confPerClient: null };
+      const { held, booked, show } = counts(r, countBlank);
       const rate = held ? r.closes / held : null;
       const m = manualFor(agent);
       let confPill = '<span class="pill none">Not logged</span>';
@@ -128,6 +135,7 @@
         <td class="agent">${agent}</td>
         <td><span class="big">${m.calls == null ? '—' : Math.round(m.calls)}</span><span class="sub">${m.callDays ? m.callDays + ' day' + (m.callDays > 1 ? 's' : '') + ' logged' : 'Not logged'}</span></td>
         <td><span class="big">${held}</span><span class="sub">${r.blank && countBlank ? r.blank + ' unmarked' : '&nbsp;'}</span></td>
+        <td><span class="big">${fmtPct(show)}</span><span class="sub">${held} of ${booked}</span><span class="sub">${r.noShow} no-show${r.noShow === 1 ? '' : 's'}</span></td>
         <td><span class="big">${fmtPct(rate)}</span><span class="sub">${r.closes} of ${held}</span></td>
         <td><span class="big">${fmtMoney(r.projPerClose)}</span><span class="sub">${r.closes ? fmtMoney(r.confPerClose) + ' confirmed' : '&nbsp;'}</span><span class="sub">${r.closes} close${r.closes === 1 ? '' : 's'}</span></td>
         <td><span class="big">${fmtMoney(r.projPerClient)}</span><span class="sub">${r.clients ? fmtMoney(r.confPerClient) + ' confirmed' : '&nbsp;'}</span><span class="sub">${r.clients} client${r.clients === 1 ? '' : 's'}</span></td>

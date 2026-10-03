@@ -102,6 +102,7 @@
   const normalizeProd = csvText => normalizeProdRows(parseCsv(csvText));
 
   // GoHighLevel contacts -> appointment-outcome records.
+  // kind: showed | blank | sale | cancelled count as held; noshow is booked but not held.
   // today is 'YYYY-MM-DD'. A blank Appointment Status counts as held with no
   // sale only when the contact was booked (tag "scheduled") and its webinar
   // date has passed.
@@ -121,7 +122,8 @@
       } else if (/^Sale/.test(status)) kind = 'sale';
       else if (/^Cancell?ed$/i.test(String(status).trim())) kind = 'cancelled';
       else if (/^Showed/.test(status)) kind = 'showed';
-      else continue; // No Show, Cancel/Reschedule, imports: outside the denominator
+      else if (/^No Show/i.test(String(status).trim())) kind = 'noshow'; // booked, not held: show rate only
+      else continue; // Cancel/Reschedule, imports: not booked appointments
       const keys = [phoneKey(c.phone), nameKey(first, last)].filter(Boolean);
       const date = (webinar || String(c.dateUpdated || '').slice(0, 10)) || null;
       out.push({ agent: AGENT_BY_ID[c.assignedTo] || 'Unassigned', kind, keys, date,
@@ -145,7 +147,7 @@
     const soldKeys = new Set(prod.flatMap(c => c.keys));
     const byAgent = {};
     const get = a => byAgent[a] || (byAgent[a] = { agent: a, sheetClients: 0, cancelled: 0, showed: 0,
-      blank: 0, proj: 0, conf: 0, clientSet: new Set() });
+      blank: 0, noShow: 0, proj: 0, conf: 0, clientSet: new Set() });
     const missing = [];
     for (const c of prod) {
       if (!inRange(c.date, from, to)) continue;
@@ -160,6 +162,7 @@
       if (g.keys.some(k => soldKeys.has(k))) continue; // already counted from the sheet
       const a = get(g.agent);
       if (g.kind === 'showed') a.showed++;
+      else if (g.kind === 'noshow') a.noShow++;
       else if (g.kind === 'blank') a.blank++;
       else if (g.kind === 'cancelled') a.cancelled++;
       else {
@@ -172,8 +175,10 @@
       const closes = a.sheetClients;
       const clients = clientSet.size;
       const held = closes + a.cancelled + a.showed + a.blank;
-      return { ...a, closes, clients, held,
+      const booked = held + a.noShow;
+      return { ...a, closes, clients, held, booked,
         closeRate: held ? closes / held : null,
+        showRate: booked ? held / booked : null,
         // Revenue per close: average size of one application.
         projPerClose: closes ? a.proj / closes : null,
         confPerClose: closes ? a.conf / closes : null,

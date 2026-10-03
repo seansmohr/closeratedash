@@ -167,3 +167,25 @@ test('day bounds work in compute', () => {
   assert.equal(KPI.compute(prod, [], '2026-09-07', '2026-09-13').rows[0].closes, 1);
   assert.equal(KPI.compute(prod, [], '2026-09-14', '2026-09-20').rows.length, 0);
 });
+
+test('show rate is held ÷ booked; No Show counts as booked, Cancel/Reschedule does not', () => {
+  const prod = KPI.normalizeProdRows([HEAD,
+    row('Sai', 'Ona Pike', '$500.00', '', '9/8/2026', '15551110020'),
+  ]);
+  const ghl = KPI.normalizeGhl([
+    contact('Pat', 'Quinn', '+15551110021', SAI, 'Showed', '2026-09-03'),
+    contact('Rae', 'Ross', '+15551110022', SAI, 'No Show', '2026-09-04'),
+    contact('Sam', 'Tate', '+15551110023', SAI, 'No Show - Veteran', '2026-09-05'),
+    contact('Tom', 'Uhl', '+15551110024', SAI, 'Cancel/Reschedule', '2026-09-05'),
+    // No-showed once, then bought: already held via the sheet, not also a no-show.
+    contact('Ona', 'Pike', '+15551110020', SAI, 'No Show 2', '2026-09-01'),
+  ], TODAY);
+  const r = KPI.compute(prod, ghl, '2026-09', '2026-09').rows[0];
+  assert.equal(r.held, 2);
+  assert.equal(r.noShow, 2);
+  assert.equal(r.booked, 4);
+  assert.equal(r.showRate, 0.5);
+  const wk = KPI.weekly(prod, ghl, '2026-09', '2026-09', TODAY).find(w => w.start === '2026-08-31').rows[0];
+  assert.equal(wk.booked, 3);
+  assert.equal(wk.noShow, 2);
+});

@@ -23,7 +23,7 @@ dashboard behind Google sign-in (jmohrins.com accounts only).
 - `public/`: `index.html`, `app.js`, `styles.css`, sign-in page
 - `test/fixtures/demo.js`: invented demo data. Never put real client data in the repo.
 
-## The five KPIs (agreed with Sean; don't add others without asking)
+## The KPIs (agreed with Sean; don't add others without asking)
 
 1. **Daily calls per agent**: entered by hand in the daily log (GoHighLevel's HIPAA setting blocks
    reading call logs through the API). Shown as the average per logged day.
@@ -34,6 +34,8 @@ dashboard behind Google sign-in (jmohrins.com accounts only).
    divides by distinct clients, so a client who buys an add-on later is worth more than one close.
 5. **Day-before confirmation calls**: entered by hand. Confirmation calls ÷ next-day appointments.
    Goal 2, ideal 3.
+6. **Show rate** = held ÷ booked, where booked = held + GoHighLevel No Shows (`No Show`,
+   `No Show 2`, `No Show - Veteran`). Cancel/Reschedule is not a booking. Monthly and weekly.
 
 ## Rules
 
@@ -50,8 +52,9 @@ dashboard behind Google sign-in (jmohrins.com accounts only).
   - `Showed` / `Showed 2`: held, no sale
   - Blank status + tag `scheduled` + webinar date before today: held, no sale ("unmarked"; the
     dashboard has a toggle to exclude these)
-  - `No Show`, `No Show 2`, `No Show - Veteran`, `Cancel/Reschedule`, `Medicare (Imported)`,
-    `IFP (Imported`: not counted
+  - `No Show`, `No Show 2`, `No Show - Veteran`: not held; counted as booked for show rate only
+    (unless the contact matches a sheet sale, which is already held)
+  - `Cancel/Reschedule`, `Medicare (Imported)`, `IFP (Imported`: not counted
   - `Sale (…)` matched to a sheet row by phone (last 10 digits) or first+last name: ignored
     (already counted from the sheet)
   - `Sale (…)` with no sheet match: treated as **cancelled** (Sean confirmed these are cancels),
