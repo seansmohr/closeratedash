@@ -1,6 +1,6 @@
 (() => {
   const $ = id => document.getElementById(id);
-  let data = { prod: [], ghl: [], pulledAt: null, sources: {}, refreshMinutes: 15 };
+  let data = { prod: [], ghl: [], appts: [], pulledAt: null, sources: {}, refreshMinutes: 15 };
   let entries = [];
   let dailyError = null;
 
@@ -34,7 +34,7 @@
   function buildPeriods() {
     const sel = $('period');
     const prev = sel.value;
-    const months = KPI.months(data.prod, data.ghl).reverse();
+    const months = KPI.months(data.prod, data.appts).reverse();
     sel.innerHTML = months.map(m => `<option value="${m}">${monthLabel(m)}</option>`).join('') + '<option value="all">All of 2026</option>';
     sel.value = prev && [...sel.options].some(o => o.value === prev) ? prev : (months[0] || 'all');
   }
@@ -57,8 +57,8 @@
   function renderBanners() {
     const out = [];
     const src = data.sources || {};
-    const names = { sheet: 'Production Sheet', ghl: 'GoHighLevel' };
-    for (const k of ['sheet', 'ghl']) {
+    const names = { sheet: 'Production Sheet', ghl: 'GoHighLevel contacts', calendar: 'GoHighLevel calendar' };
+    for (const k of ['sheet', 'ghl', 'calendar']) {
       const s = src[k];
       if (s && s.ok === false) {
         const since = s.at ? ` Showing data from ${fmtTime(s.at)}.` : ' No data from it yet.';
@@ -86,7 +86,7 @@
     const [from, to] = range();
     const pick = $('weekAgent').value;
     const agents = pick ? [pick] : KPI.AGENTS;
-    const weeks = KPI.weekly(data.prod, data.ghl, from, to, todayIso());
+    const weeks = KPI.weekly(data.prod, data.ghl, data.appts, from, to, todayIso());
     const table = $('weeksTable');
     table.querySelectorAll('tbody').forEach(n => n.remove());
     if (!weeks.length) { table.insertAdjacentHTML('beforeend', '<tbody><tr><td colspan="9" class="muted">No activity in this period.</td></tr></tbody>'); return; }
@@ -121,7 +121,7 @@
     renderBanners();
     const [from, to] = range();
     const countBlank = $('countBlank').checked;
-    const { rows, missing } = KPI.compute(data.prod, data.ghl, from, to);
+    const { rows, missing } = KPI.compute(data.prod, data.ghl, data.appts, from, to);
     const byAgent = Object.fromEntries(rows.map(r => [r.agent, r]));
 
     $('score').innerHTML = KPI.AGENTS.map(agent => {
@@ -145,28 +145,26 @@
 
     renderWeekly(countBlank);
 
-    // What makes up "held"
-    const maxHeld = Math.max(1, ...KPI.AGENTS.map(a => (byAgent[a] && byAgent[a].held) || 0));
+    // What makes up "booked"
+    const maxBooked = Math.max(1, ...KPI.AGENTS.map(a => (byAgent[a] && byAgent[a].booked) || 0));
     let totalHeld = 0, totalBlank = 0;
     $('mix').innerHTML = KPI.AGENTS.map(agent => {
-      const r = byAgent[agent] || { closes: 0, cancelled: 0, showed: 0, blank: 0, held: 0 };
+      const r = byAgent[agent] || { showed: 0, blank: 0, noShow: 0, held: 0, booked: 0 };
       totalHeld += r.held; totalBlank += r.blank;
-      const seg = (n, v) => n ? `<span style="width:${(n / maxHeld) * 100}%;background:var(${v})" title="${n}"></span>` : '';
+      const seg = (n, v) => n ? `<span style="width:${(n / maxBooked) * 100}%;background:var(${v})" title="${n}"></span>` : '';
       return `<div class="mix-row"><span class="name">${agent}</span>
-        <div class="bar" role="img" aria-label="${agent}: ${r.closes} sold, ${r.cancelled} cancelled, ${r.showed} marked showed, ${r.blank} unmarked">
-          ${seg(r.closes, '--seg-sale')}${seg(r.cancelled, '--seg-cxl')}${seg(r.showed, '--seg-showed')}${seg(r.blank, '--seg-blank')}
-        </div><span class="num muted mix-total">${r.held}</span></div>`;
+        <div class="bar" role="img" aria-label="${agent}: ${r.showed} marked held, ${r.blank} unmarked, ${r.noShow} no-shows">
+          ${seg(r.showed, '--seg-sale')}${seg(r.blank, '--seg-blank')}${seg(r.noShow, '--seg-cxl')}
+        </div><span class="num muted mix-total">${r.booked}</span></div>`;
     }).join('');
     $('mixNote').textContent = totalHeld
-      ? `${Math.round((totalBlank / totalHeld) * 100)}% of held appointments in this period have a blank Appointment Status. Those are booked contacts whose webinar date has passed, so some are no-shows nobody marked. The more the team marks Showed or No Show, the more accurate the close rate gets.`
+      ? `${Math.round((totalBlank / totalHeld) * 100)}% of held appointments in this period were never marked: still Confirmed on the calendar with a blank Appointment Status, so some are no-shows nobody marked. The more the team marks Showed or No Show, the more accurate show rate and close rate get.`
       : '';
 
     // Needs cleanup
-    const unowned = rows.find(r => r.agent === 'Unassigned');
     const miss = missing.filter(x => KPI.AGENTS.includes(x.agent));
     let html = '';
-    if (miss.length) html += `<div><p><strong>${miss.length} contact${miss.length > 1 ? 's are' : ' is'} still marked Sale in GoHighLevel but ${miss.length > 1 ? 'aren’t' : 'isn’t'} on the Production Sheet.</strong> They count as held and cancelled, not closed. If one is an active client, add it to the sheet.</p><ul>${miss.map(x => `<li>${esc(x.name)} · ${x.agent} · ${esc(x.status)}</li>`).join('')}</ul></div>`;
-    if (unowned && unowned.held) html += `<p><strong>${unowned.held} held appointment${unowned.held > 1 ? 's have' : ' has'} no contact owner in GoHighLevel</strong>, so ${unowned.held > 1 ? 'they' : 'it'} can’t be credited to an agent.</p>`;
+    if (miss.length) html += `<div><p><strong>${miss.length} contact${miss.length > 1 ? 's are' : ' is'} still marked Sale in GoHighLevel but ${miss.length > 1 ? 'aren’t' : 'isn’t'} on the Production Sheet.</strong> They aren’t counted as closes. If one is an active client, add it to the sheet; if it cancelled, change its Appointment Status.</p><ul>${miss.map(x => `<li>${esc(x.name)} · ${x.agent} · ${esc(x.status)}</li>`).join('')}</ul></div>`;
     $('cleanup').innerHTML = html || '<p>Nothing to clean up in this period.</p>';
 
     // Daily log entries

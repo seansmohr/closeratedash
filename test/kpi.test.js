@@ -17,6 +17,10 @@ const contact = (first, last, phone, owner, status, webinar, tags = ['scheduled'
   ],
 });
 const TODAY = '2026-09-30';
+let evN = 0;
+const event = (contactId, owner, start, status = 'confirmed') =>
+  ({ id: `e${++evN}`, contactId, assignedUserId: owner, startTime: `${start}T10:00:00-07:00`, appointmentStatus: status, deleted: false });
+const withId = (id, c) => ({ ...c, id });
 
 test('products sold on the same App Date are one close; a later App Date is a separate close', () => {
   const prod = KPI.normalizeProdRows([HEAD,
@@ -25,47 +29,68 @@ test('products sold on the same App Date are one close; a later App Date is a se
     row('Sai ', 'Ann Lee', '$300.00', '', '9/14/26', '15551110001'),
   ]);
   assert.equal(prod.length, 2);
-  const aug = KPI.compute(prod, [], '2026-08', '2026-08').rows[0];
+  const aug = KPI.compute(prod, [], [], '2026-08', '2026-08').rows[0];
   assert.equal(aug.closes, 1);
   assert.equal(aug.projPerClose, 700);
   assert.equal(aug.confPerClose, 500);
-  const sep = KPI.compute(prod, [], '2026-09', '2026-09').rows[0];
+  const sep = KPI.compute(prod, [], [], '2026-09', '2026-09').rows[0];
   assert.equal(sep.closes, 1);
   assert.equal(sep.projPerClose, 300);
 });
 
-test('a fully cancelled application counts as held but not closed, and stays out of revenue per client', () => {
+test('a fully cancelled application is not a close and stays out of revenue per client', () => {
   const prod = KPI.normalizeProdRows([HEAD,
     row('Sean', 'Bo Park', '$800.00', '$800.00', '9/2/2026', '15551110002'),
     row('Sean', 'Cy Diaz', '-$435.00', '-$435.00', '9/5/2026', '15551110003'),
   ]);
-  const r = KPI.compute(prod, [], '2026-09', '2026-09').rows[0];
+  const r = KPI.compute(prod, [], [], '2026-09', '2026-09').rows[0];
   assert.equal(r.closes, 1);
   assert.equal(r.cancelled, 1);
-  assert.equal(r.held, 2);
-  assert.equal(r.closeRate, 0.5);
   assert.equal(r.projPerClose, 800);
   assert.equal(r.projPerClient, 800);
 });
 
-test('GoHighLevel outcomes: Showed and past blanks are held; No Show and future blanks are not', () => {
-  const ghl = KPI.normalizeGhl([
-    contact('Dee', 'Fox', '+15551110004', SAI, 'Showed', '2026-09-03'),
-    contact('Eli', 'Gay', '+15551110005', SAI, 'No Show', '2026-09-04'),
-    contact('Fay', 'Hu', '+15551110006', SAI, 'No Show 2', '2026-09-04'),
-    contact('Gus', 'Ito', '+15551110007', SAI, null, '2026-09-10'),
-    contact('Hal', 'Jo', '+15551110008', SAI, null, '2026-10-02'),
-    contact('Ida', 'Ku', '+15551110009', SAI, null, '2026-09-10', []),
-    contact('Jan', 'Lo', '+15551110010', SAI, 'Medicare (Imported)', '2026-09-10'),
-  ], TODAY);
-  const r = KPI.compute([], ghl, '2026-09', '2026-09').rows[0];
-  assert.equal(r.showed, 1);
-  assert.equal(r.blank, 1);
-  assert.equal(r.held, 2);
-  assert.equal(r.closes, 0);
+test('appointments come from the calendar, by appointment date and assigned agent', () => {
+  const contacts = [
+    withId('c1', contact('Dee', 'Fox', '+15551110004', SEAN, 'Showed', '2026-06-03')), // owner differs from the calendar
+    withId('c2', contact('Eli', 'Gay', '+15551110005', SAI, 'No Show', '2026-06-04')),
+    withId('c3', contact('Fay', 'Hu', '+15551110006', SAI, null, '2026-06-04')),
+  ];
+  const appts = KPI.normalizeAppointments([
+    event('c1', SAI, '2026-09-28'),               // contact marked Showed: held
+    event('c2', SAI, '2026-09-29', 'noshow'),     // marked on the calendar
+    event('c3', SAI, '2026-09-29'),               // nobody marked it: unmarked
+    event('c3', SAI, '2026-09-29', 'cancelled'),  // cancelled: not booked
+    event('c3', SAI, '2026-10-02'),               // hasn't happened yet
+    { ...event('c3', SAI, '2026-09-28'), deleted: true },
+  ], contacts, TODAY);
+  assert.deepEqual(appts.map(a => [a.agent, a.date, a.outcome]),
+    [['Sai', '2026-09-28', 'held'], ['Sai', '2026-09-29', 'noshow'], ['Sai', '2026-09-29', 'unmarked']]);
+  const r = KPI.compute([], [], appts, '2026-09-28', '2026-10-04').rows[0];
+  assert.deepEqual([r.agent, r.booked, r.held, r.blank, r.noShow, r.showRate], ['Sai', 3, 2, 1, 1, 2 / 3]);
 });
 
-test('a GoHighLevel Sale that is on the sheet is not double counted, matched by phone or by name', () => {
+test('a contact’s Appointment Status applies only to their latest appointment', () => {
+  const contacts = [
+    withId('c1', contact('Gus', 'Ito', '+15551110007', SAI, 'No Show 2', '2026-09-01')),
+    withId('c2', contact('Hal', 'Jo', '+15551110008', SAI, 'Cancel/Reschedule', '2026-09-01')),
+    withId('c3', contact('Ida', 'Ku', '+15551110009', SAI, 'Sale (MA)', '2026-09-01')),
+  ];
+  const appts = KPI.normalizeAppointments([
+    event('c1', SAI, '2026-09-08'), event('c1', SAI, '2026-09-15'),
+    event('c2', SAI, '2026-09-09'),
+    event('c3', SAI, '2026-09-10'),
+  ], contacts, TODAY);
+  assert.deepEqual(appts.map(a => [a.date, a.outcome]),
+    [['2026-09-08', 'unmarked'], ['2026-09-15', 'noshow'], ['2026-09-10', 'held']]);
+});
+
+test('event times are dated in the agency’s time zone', () => {
+  assert.equal(KPI.localDate('2026-09-28T17:30:00-07:00'), '2026-09-28');
+  assert.equal(KPI.localDate('2026-09-29T00:30:00Z', 'America/Los_Angeles'), '2026-09-28');
+});
+
+test('a GoHighLevel Sale that is on the sheet is not flagged, matched by phone or by name', () => {
   const prod = KPI.normalizeProdRows([HEAD,
     row('Sai', 'Kim Moss', '$600.00', '', '9/8/2026', '15551110011'),
     row('Sai', 'Lou Nash', '$400.00', '', '9/9/2026', ''),
@@ -73,34 +98,31 @@ test('a GoHighLevel Sale that is on the sheet is not double counted, matched by 
   const ghl = KPI.normalizeGhl([
     contact('Kim', 'Moss', '(555) 111-0011', SAI, 'Sale (MA)', '2026-09-05'),
     contact('Lou', 'Nash', '+15550000000', SAI, 'Sale (MedSupp)', '2026-09-06'),
-  ], TODAY);
-  const { rows, missing } = KPI.compute(prod, ghl, '2026-09', '2026-09');
+  ]);
+  const { rows, missing } = KPI.compute(prod, ghl, [], '2026-09', '2026-09');
   assert.equal(rows[0].closes, 2);
-  assert.equal(rows[0].held, 2);
   assert.equal(missing.length, 0);
 });
 
-test('a GoHighLevel Sale missing from the sheet counts as cancelled and is flagged', () => {
-  const ghl = KPI.normalizeGhl([contact('May', 'Orr', '+15551110012', SEAN, 'Sale (Umbrella)', '2026-09-12')], TODAY);
-  const { rows, missing } = KPI.compute([], ghl, '2026-09', '2026-09');
-  assert.equal(rows[0].closes, 0);
-  assert.equal(rows[0].cancelled, 1);
-  assert.equal(rows[0].held, 1);
+test('a GoHighLevel Sale missing from the sheet is flagged, not counted as a close', () => {
+  const ghl = KPI.normalizeGhl([contact('May', 'Orr', '+15551110012', SEAN, 'Sale (Umbrella)', '2026-09-12')]);
+  const { rows, missing } = KPI.compute([], ghl, [], '2026-09', '2026-09');
+  assert.equal(rows.length, 0);
   assert.deepEqual(missing.map(m => m.name), ['May Orr']);
 });
 
-test('the sheet decides the agent for a sale, not the GoHighLevel owner', () => {
+test('the sheet decides the agent for a sale', () => {
   const prod = KPI.normalizeProdRows([HEAD, row('Sai', 'Ned Pye', '$500.00', '', '9/15/2026', '15551110013')]);
-  const ghl = KPI.normalizeGhl([contact('Ned', 'Pye', '+15551110013', 'someSetterId', 'Sale (MA)', '2026-09-14')], TODAY);
-  const { rows } = KPI.compute(prod, ghl, '2026-09', '2026-09');
-  assert.deepEqual(rows.map(r => [r.agent, r.closes, r.held]), [['Sai', 1, 1]]);
+  const { rows } = KPI.compute(prod, [], [], '2026-09', '2026-09');
+  assert.deepEqual(rows.map(r => [r.agent, r.closes]), [['Sai', 1]]);
 });
 
-test('example contacts and unknown owners', () => {
+test('only Sale contacts are kept from GoHighLevel, skipping examples', () => {
   const ghl = KPI.normalizeGhl([
     contact('(Example)', 'Casey Morgan', '+15551110014', SAI, 'Sale (MA)', '2026-09-01'),
-    contact('Oz', 'Quin', '+15551110015', null, 'Showed', '2026-09-01'),
-  ], TODAY);
+    contact('Oz', 'Quin', '+15551110015', null, 'Sale (MA)', '2026-09-01'),
+    contact('Pia', 'Ray', '+15551110018', SAI, 'Showed', '2026-09-01'),
+  ]);
   assert.equal(ghl.length, 1);
   assert.equal(ghl[0].agent, 'Unassigned');
 });
@@ -110,7 +132,7 @@ test('stripMatchedLabels keeps names only for sales missing from the sheet', () 
   const ghl = KPI.stripMatchedLabels(prod, KPI.normalizeGhl([
     contact('Pam', 'Rue', '+15551110016', SAI, 'Sale (MA)', '2026-09-01'),
     contact('Quin', 'Sol', '+15551110017', SAI, 'Sale (MA)', '2026-09-01'),
-  ], TODAY));
+  ]));
   assert.deepEqual(ghl.map(g => g.label), [undefined, 'Quin Sol']);
 });
 
@@ -133,13 +155,13 @@ test('revenue per client adds up each client\u2019s applications in the period; 
     row('Sai', 'Rae Tate', '$300.00', '', '9/14/2026', '15551110020'),
     row('Sai', 'Sy Ueda', '$600.00', '$600.00', '9/2/2026', '15551110021'),
   ]);
-  const year = KPI.compute(prod, [], null, null).rows[0];
+  const year = KPI.compute(prod, [], [], null, null).rows[0];
   assert.equal(year.closes, 3);
   assert.equal(year.clients, 2);
   assert.equal(year.projPerClose, 600);
   assert.equal(year.projPerClient, 900);
   assert.equal(year.confPerClient, 750);
-  const sep = KPI.compute(prod, [], '2026-09', '2026-09').rows[0];
+  const sep = KPI.compute(prod, [], [], '2026-09', '2026-09').rows[0];
   assert.equal(sep.clients, 2);
   assert.equal(sep.projPerClient, 450);
 });
@@ -150,42 +172,22 @@ test('weekly breakdown uses Monday-to-Sunday weeks that overlap the month, newes
     row('Sai', 'Uma Webb', '$700.00', '', '9/8/2026', '15551110031'),    // Monday: week of Sep 7
     row('Sai', 'Val Xu', '$300.00', '', '9/30/2026', '15551110032'),     // Wednesday: week of Sep 28
   ]);
-  const ghl = KPI.normalizeGhl([contact('Wes', 'Yee', '+15551110033', SAI, 'Showed', '2026-09-09')], TODAY);
-  const weeks = KPI.weekly(prod, ghl, '2026-09', '2026-09');
+  const appts = KPI.normalizeAppointments([event('w1', SAI, '2026-09-09'), event('w2', SAI, '2026-09-10', 'noshow')], [], TODAY);
+  const weeks = KPI.weekly(prod, [], appts, '2026-09', '2026-09');
   assert.deepEqual(weeks.map(w => w.start), ['2026-09-28', '2026-09-21', '2026-09-14', '2026-09-07', '2026-08-31']);
   const wk = s => weeks.find(w => w.start === s).rows[0];
   assert.equal(wk('2026-08-31').closes, 1);
   assert.equal(wk('2026-09-07').closes, 1);
-  assert.equal(wk('2026-09-07').held, 2);
-  assert.equal(wk('2026-09-07').closeRate, 0.5);
+  assert.equal(wk('2026-09-07').held, 1);
+  assert.equal(wk('2026-09-07').booked, 2);
+  assert.equal(wk('2026-09-07').showRate, 0.5);
+  assert.equal(wk('2026-09-07').closeRate, 1);
   assert.equal(wk('2026-09-28').projPerClose, 300);
   assert.equal(KPI.mondayOf('2026-09-30'), '2026-09-28');
 });
 
 test('day bounds work in compute', () => {
   const prod = KPI.normalizeProdRows([HEAD, row('Sean', 'Xan Zed', '$400.00', '', '9/13/2026', '15551110034')]);
-  assert.equal(KPI.compute(prod, [], '2026-09-07', '2026-09-13').rows[0].closes, 1);
-  assert.equal(KPI.compute(prod, [], '2026-09-14', '2026-09-20').rows.length, 0);
-});
-
-test('show rate is held ÷ booked; No Show counts as booked, Cancel/Reschedule does not', () => {
-  const prod = KPI.normalizeProdRows([HEAD,
-    row('Sai', 'Ona Pike', '$500.00', '', '9/8/2026', '15551110020'),
-  ]);
-  const ghl = KPI.normalizeGhl([
-    contact('Pat', 'Quinn', '+15551110021', SAI, 'Showed', '2026-09-03'),
-    contact('Rae', 'Ross', '+15551110022', SAI, 'No Show', '2026-09-04'),
-    contact('Sam', 'Tate', '+15551110023', SAI, 'No Show - Veteran', '2026-09-05'),
-    contact('Tom', 'Uhl', '+15551110024', SAI, 'Cancel/Reschedule', '2026-09-05'),
-    // No-showed once, then bought: already held via the sheet, not also a no-show.
-    contact('Ona', 'Pike', '+15551110020', SAI, 'No Show 2', '2026-09-01'),
-  ], TODAY);
-  const r = KPI.compute(prod, ghl, '2026-09', '2026-09').rows[0];
-  assert.equal(r.held, 2);
-  assert.equal(r.noShow, 2);
-  assert.equal(r.booked, 4);
-  assert.equal(r.showRate, 0.5);
-  const wk = KPI.weekly(prod, ghl, '2026-09', '2026-09', TODAY).find(w => w.start === '2026-08-31').rows[0];
-  assert.equal(wk.booked, 3);
-  assert.equal(wk.noShow, 2);
+  assert.equal(KPI.compute(prod, [], [], '2026-09-07', '2026-09-13').rows[0].closes, 1);
+  assert.equal(KPI.compute(prod, [], [], '2026-09-14', '2026-09-20').rows.length, 0);
 });

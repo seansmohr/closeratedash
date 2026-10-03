@@ -101,33 +101,81 @@
   }
   const normalizeProd = csvText => normalizeProdRows(parseCsv(csvText));
 
-  // GoHighLevel contacts -> appointment-outcome records.
-  // kind: showed | blank | sale | cancelled count as held; noshow is booked but not held.
-  // today is 'YYYY-MM-DD'. A blank Appointment Status counts as held with no
-  // sale only when the contact was booked (tag "scheduled") and its webinar
-  // date has passed.
-  function normalizeGhl(contacts, today) {
+  const contactStatus = c => {
+    const f = (c.customFields || []).find(x => x.id === F_STATUS);
+    return String((f && f.value) || '').trim();
+  };
+
+  // GoHighLevel contacts marked Sale -> records used only to flag sales that
+  // never made it onto the Production Sheet (the Needs cleanup list).
+  // Appointment counts come from the calendar (normalizeAppointments).
+  function normalizeGhl(contacts) {
     const out = [];
     for (const c of contacts) {
-      const cf = Object.fromEntries((c.customFields || []).map(x => [x.id, x.value]));
-      const status = cf[F_STATUS];
-      const webinar = String(cf[F_WEBINAR] || '').slice(0, 10) || null;
+      const status = contactStatus(c);
+      if (!/^Sale/.test(status)) continue;
       const first = c.firstName || '', last = c.lastName || '';
       const full = `${first} ${last}`.trim();
       if (full.startsWith('(Example)')) continue;
-      let kind = null;
-      if (!status) {
-        if (!(c.tags || []).includes('scheduled') || !webinar || webinar >= today) continue;
-        kind = 'blank';
-      } else if (/^Sale/.test(status)) kind = 'sale';
-      else if (/^Cancell?ed$/i.test(String(status).trim())) kind = 'cancelled';
-      else if (/^Showed/.test(status)) kind = 'showed';
-      else if (/^No Show/i.test(String(status).trim())) kind = 'noshow'; // booked, not held: show rate only
-      else continue; // Cancel/Reschedule, imports: not booked appointments
-      const keys = [phoneKey(c.phone), nameKey(first, last)].filter(Boolean);
-      const date = (webinar || String(c.dateUpdated || '').slice(0, 10)) || null;
-      out.push({ agent: AGENT_BY_ID[c.assignedTo] || 'Unassigned', kind, keys, date,
-        label: kind === 'sale' ? full : undefined, status });
+      const cf = Object.fromEntries((c.customFields || []).map(x => [x.id, x.value]));
+      const webinar = String(cf[F_WEBINAR] || '').slice(0, 10) || null;
+      out.push({ agent: AGENT_BY_ID[c.assignedTo] || 'Unassigned', kind: 'sale',
+        keys: [phoneKey(c.phone), nameKey(first, last)].filter(Boolean),
+        date: (webinar || String(c.dateUpdated || '').slice(0, 10)) || null, label: full, status });
+    }
+    return out;
+  }
+
+  // Calendar date of an event start. GoHighLevel sends local time with an
+  // offset (2026-09-28T10:00:00-07:00); anything else is converted to timeZone.
+  function localDate(start, timeZone) {
+    const s = String(start || '');
+    if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?([+-]\d{2}:?\d{2})$/.test(s)) return s.slice(0, 10);
+    const d = new Date(/^\d+$/.test(s) ? Number(s) : s);
+    if (isNaN(d)) return null;
+    return new Intl.DateTimeFormat('en-CA', { timeZone: timeZone || 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  }
+
+  // GoHighLevel calendar events -> one record per appointment: { agent, date, outcome }.
+  // The agent is the user the appointment is assigned to; the date is the
+  // appointment day. Outcome:
+  //   noshow   - marked no-show on the calendar, or the contact's Appointment
+  //              Status is No Show (for the contact's latest appointment)
+  //   held     - marked showed on the calendar, or the contact is Showed / Sale / Cancelled
+  //   unmarked - in the past and nobody marked it (held, unless the toggle excludes it)
+  // Cancelled and invalid events, deleted events, and appointments that haven't
+  // happened yet are left out. A latest appointment whose contact is marked
+  // Cancel/Reschedule is left out too.
+  function normalizeAppointments(events, contacts, today, timeZone) {
+    const statusById = new Map((contacts || []).map(c => [c.id, contactStatus(c)]));
+    const seen = new Set();
+    const list = [];
+    for (const e of events || []) {
+      if (!e || e.deleted || seen.has(e.id)) continue;
+      seen.add(e.id);
+      const ev = String(e.appointmentStatus || '').toLowerCase();
+      if (ev === 'cancelled' || ev === 'invalid') continue;
+      const date = localDate(e.startTime, timeZone);
+      if (!date) continue;
+      if (date >= today && ev !== 'showed' && ev !== 'noshow') continue; // hasn't happened yet
+      list.push({ contact: e.contactId, agent: AGENT_BY_ID[e.assignedUserId] || 'Unassigned', date, ev });
+    }
+    // The contact's Appointment Status describes their most recent appointment.
+    const latest = new Map();
+    for (const a of list) { const l = latest.get(a.contact); if (!l || a.date >= l.date) latest.set(a.contact, a); }
+    const out = [];
+    for (const a of list) {
+      let outcome;
+      if (a.ev === 'noshow') outcome = 'noshow';
+      else if (a.ev === 'showed') outcome = 'held';
+      else {
+        const st = latest.get(a.contact) === a ? statusById.get(a.contact) || '' : '';
+        if (/^No Show/i.test(st)) outcome = 'noshow';
+        else if (/^Cancel\s*\/\s*Reschedule/i.test(st)) continue;
+        else if (/^(Showed|Sale|Cancell?ed)/i.test(st)) outcome = 'held';
+        else outcome = 'unmarked';
+      }
+      out.push({ agent: a.agent, date: a.date, outcome });
     }
     return out;
   }
@@ -143,7 +191,9 @@
   const inRange = (d, from, to) => !!d && (!from || d.slice(0, from.length) >= from) && (!to || d.slice(0, to.length) <= to);
 
   // from/to: 'YYYY-MM' or 'YYYY-MM-DD', inclusive, or null for no bound.
-  function compute(prod, ghl, from, to) {
+  // Closes and revenue come from the sheet (by App Date); booked, held and
+  // no-shows come from the calendar (by appointment date).
+  function compute(prod, ghl, appts, from, to) {
     const soldKeys = new Set(prod.flatMap(c => c.keys));
     const byAgent = {};
     const get = a => byAgent[a] || (byAgent[a] = { agent: a, sheetClients: 0, cancelled: 0, showed: 0,
@@ -157,24 +207,22 @@
         a.clientSet.add(c.client);
       } else a.cancelled++; // net zero or negative: the application cancelled
     }
-    for (const g of ghl) {
-      if (!inRange(g.date, from, to)) continue;
-      if (g.keys.some(k => soldKeys.has(k))) continue; // already counted from the sheet
-      const a = get(g.agent);
-      if (g.kind === 'showed') a.showed++;
-      else if (g.kind === 'noshow') a.noShow++;
-      else if (g.kind === 'blank') a.blank++;
-      else if (g.kind === 'cancelled') a.cancelled++;
-      else {
-        // Marked Sale in GoHighLevel but not on the Production Sheet: treated as cancelled.
-        a.cancelled++;
-        missing.push({ agent: g.agent, name: g.label, status: g.status, date: g.date });
-      }
+    for (const x of appts || []) {
+      if (!inRange(x.date, from, to)) continue;
+      const a = get(x.agent);
+      if (x.outcome === 'noshow') a.noShow++;
+      else if (x.outcome === 'unmarked') a.blank++;
+      else a.showed++;
+    }
+    for (const g of ghl || []) {
+      // Marked Sale in GoHighLevel but not on the Production Sheet: not a close; flagged.
+      if (g.kind !== 'sale' || !inRange(g.date, from, to) || g.keys.some(k => soldKeys.has(k))) continue;
+      missing.push({ agent: g.agent, name: g.label, status: g.status, date: g.date });
     }
     const rows = Object.values(byAgent).map(({ clientSet, ...a }) => {
       const closes = a.sheetClients;
       const clients = clientSet.size;
-      const held = closes + a.cancelled + a.showed + a.blank;
+      const held = a.showed + a.blank;
       const booked = held + a.noShow;
       return { ...a, closes, clients, held, booked,
         closeRate: held ? closes / held : null,
@@ -202,8 +250,8 @@
   // Weeks run Monday to Sunday. Returns every week that overlaps the period
   // (from/to as 'YYYY-MM' or null), newest first, each with the same rows
   // compute() gives for a month. lastDay caps open-ended periods (use today).
-  function weekly(prod, ghl, from, to, lastDay) {
-    const dates = [...prod, ...ghl].map(r => r.date).filter(d => d && d >= '2026-01-01').sort();
+  function weekly(prod, ghl, appts, from, to, lastDay) {
+    const dates = [...prod, ...(appts || [])].map(r => r.date).filter(d => d && d >= '2026-01-01').sort();
     if (!dates.length) return [];
     let first = from ? from + '-01' : dates[0];
     let last = to ? monthEnd(to) : dates[dates.length - 1];
@@ -212,17 +260,18 @@
     const out = [];
     for (let start = mondayOf(first); start <= last; start = addDays(start, 7)) {
       const end = addDays(start, 6);
-      out.push({ start, end, rows: compute(prod, ghl, start, end).rows });
+      out.push({ start, end, rows: compute(prod, ghl, appts, start, end).rows });
     }
     return out.reverse();
   }
 
-  function months(prod, ghl, since) {
+  function months(prod, appts, since) {
     const s = new Set();
-    for (const r of [...prod, ...ghl]) if (r.date && r.date.slice(0, 7) >= (since || '2026-01')) s.add(r.date.slice(0, 7));
+    for (const r of [...prod, ...(appts || [])]) if (r.date && r.date.slice(0, 7) >= (since || '2026-01')) s.add(r.date.slice(0, 7));
     return [...s].sort();
   }
 
   return { AGENTS, AGENT_BY_ID, F_STATUS, F_WEBINAR, parseCsv, normalizeProd, normalizeProdRows, normalizeGhl,
+    normalizeAppointments, localDate,
     stripMatchedLabels, compute, weekly, months, money, usDate, mondayOf, addDays };
 });

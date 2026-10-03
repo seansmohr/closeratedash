@@ -26,7 +26,8 @@ Google sign-in client, and the Railway project.
 ### 1. GoHighLevel token
 
 1. In the Mohr sub-account: **Settings → Private Integrations → Create new integration**.
-2. Name it `Sales KPI dashboard` and give it only **View Contacts** (`contacts.readonly`).
+2. Name it `Sales KPI dashboard` and give it only **View Contacts** (`contacts.readonly`) and
+   **View Calendar Events** (`calendars/events.readonly`).
 3. Copy the token. It's `GHL_TOKEN`. GoHighLevel recommends rotating these tokens every 90 days.
 
 ### 2. Google service account (reads the Production Sheet)

@@ -52,7 +52,7 @@
         <tbody id="score"></tbody>
       </table>
     </div>
-    <p class="note">Closes and revenue come from the Production Sheet: each client application, by App Date, is one close for the agent in the Agent column, so an add-on sale in a later month counts as its own close. Appointments with no sale come from GoHighLevel, attributed to the contact owner. Revenue per close averages each application; revenue per client adds up all of a client’s applications in the selected period. Cancelled policies count as held but not closed, and are left out of both revenue figures. A contact marked Sale in GoHighLevel that isn't on the sheet is treated as cancelled. Show rate is held ÷ booked, where booked is held plus contacts marked No Show (No Show, No Show 2, No Show - Veteran); Cancel/Reschedule isn't counted as booked.</p>
+    <p class="note">Closes and revenue come from the Production Sheet: each client application, by App Date, is one close for the agent in the Agent column, so an add-on sale in a later month counts as its own close. Booked, held and no-show appointments come from the GoHighLevel calendar, by appointment date, credited to the agent the appointment is assigned to; appointments that haven’t happened yet aren’t counted. Revenue per close averages each application; revenue per client adds up all of a client’s applications in the selected period. Cancelled policies aren’t closes and are left out of both revenue figures. Show rate is held ÷ booked. A no-show is an appointment marked No Show on the calendar, or whose contact’s Appointment Status is No Show; cancelled and rescheduled appointments aren’t counted as booked.</p>
   </section>
 
   <section aria-labelledby="weekH">
@@ -79,18 +79,17 @@
         </thead>
       </table>
     </div>
-    <p class="note">Weeks run Monday to Sunday. Sales are placed by App Date. Appointments without a sale are placed by webinar date, so one held a few days after its webinar can land in the week before.</p>
+    <p class="note">Weeks run Monday to Sunday. Sales are placed by App Date and appointments by appointment date, so a sale written up a few days after the appointment can land in the next week.</p>
   </section>
 
   <section aria-labelledby="mixH">
-    <h2 id="mixH">What makes up “held”</h2>
+    <h2 id="mixH">What makes up “booked”</h2>
     <div class="panel mix">
       <div id="mix"></div>
       <div class="legend">
-        <span><i class="k-sale"></i>Sold</span>
-        <span><i class="k-cxl"></i>Sold, then cancelled</span>
-        <span><i class="k-showed"></i>Marked Showed, no sale</span>
-        <span><i class="k-blank"></i>Booked, status left blank</span>
+        <span><i class="k-sale"></i>Held: marked Showed or Sale</span>
+        <span><i class="k-blank"></i>Held: never marked</span>
+        <span><i class="k-cxl"></i>No-show</span>
       </div>
     </div>
     <p class="note" id="mixNote"></p>

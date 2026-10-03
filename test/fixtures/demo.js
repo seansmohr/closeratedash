@@ -1,6 +1,6 @@
 // Made-up data for local development (DEMO_DATA=1). No real clients.
 // Shapes match the Google Sheets values API (rows of strings) and the
-// GoHighLevel contacts search response.
+// GoHighLevel contacts search and calendar events responses.
 const KPI = require('../../src/kpi');
 
 const AGENT_IDS = Object.fromEntries(Object.entries(KPI.AGENT_BY_ID).map(([id, name]) => [name, id]));
@@ -19,6 +19,7 @@ function build() {
     'Projected Commission', 'Confirmed Commission', 'App Date', 'Effective Date', 'Medicare Number', 'New Client (Y/N)',
     'Lead Source', 'Calls to Close', 'Primary Close (auto)', 'Phone Number']];
   const contacts = [];
+  const events = [];
   let n = 0;
   const share = { Sai: 0.6, Sean: 0.28, James: 0.12 };
   for (const month of [7, 8, 9]) {
@@ -48,13 +49,22 @@ function build() {
         contact.customFields.push({ id: KPI.F_STATUS, value: 'No Show' });
       }
       contacts.push(contact);
+      // The appointment, a few days after the webinar. About half the no-shows
+      // are marked on the calendar too; the rest only on the contact.
+      const st = (contact.customFields.find(f => f.id === KPI.F_STATUS) || {}).value || '';
+      const appt = KPI.addDays(iso, Math.floor(r() * 6));
+      events.push({ id: `evt${n}`, contactId: contact.id, assignedUserId: AGENT_IDS[agent], deleted: false,
+        startTime: `${appt}T${String(9 + Math.floor(r() * 8)).padStart(2, '0')}:00:00-07:00`,
+        appointmentStatus: st === 'No Show' && r() < 0.5 ? 'noshow' : 'confirmed' });
+      if (r() < 0.05) events.push({ id: `evt${n}x`, contactId: contact.id, assignedUserId: AGENT_IDS[agent], deleted: false,
+        startTime: `${appt}T08:00:00-07:00`, appointmentStatus: 'cancelled' });
     }
   }
   // One contact marked Sale in GoHighLevel that never made the sheet.
   contacts.push({ id: 'demo-stale', firstName: 'Wilma', lastName: 'Example', phone: '+15559999999', assignedTo: AGENT_IDS.Sai,
     tags: ['scheduled'], customFields: [{ id: KPI.F_STATUS, value: 'Sale (Umbrella)' }, { id: KPI.F_WEBINAR, value: '2026-09-10T00:00:00.000Z' }] });
-  return { rows, contacts };
+  return { rows, contacts, events };
 }
 
 const data = build();
-module.exports = { prodRows: async () => data.rows, contacts: async () => data.contacts };
+module.exports = { prodRows: async () => data.rows, contacts: async () => data.contacts, events: async () => data.events };

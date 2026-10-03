@@ -1,6 +1,7 @@
-// GoHighLevel contacts search (POST /contacts/search) with a Private Integration token.
+// GoHighLevel contacts search (POST /contacts/search) and calendar events
+// (GET /calendars/events) with a Private Integration token.
 const { config } = require('./config');
-const { F_STATUS } = require('./kpi');
+const { F_STATUS, AGENT_BY_ID, addDays } = require('./kpi');
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -8,19 +9,19 @@ class SourceError extends Error {
   constructor(source, message, status) { super(message); this.source = source; this.status = status; }
 }
 
-async function searchPage(body) {
+async function request(path, { body, version = config.ghl.apiVersion, scope } = {}) {
   for (let attempt = 0; ; attempt++) {
     let res;
     try {
-      res = await fetch(`${config.ghl.baseUrl}/contacts/search`, {
-        method: 'POST',
+      res = await fetch(`${config.ghl.baseUrl}${path}`, {
+        method: body ? 'POST' : 'GET',
         headers: {
           Authorization: `Bearer ${config.ghl.token}`,
-          Version: config.ghl.apiVersion,
-          'Content-Type': 'application/json',
+          Version: version,
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
           Accept: 'application/json',
         },
-        body: JSON.stringify(body),
+        body: body ? JSON.stringify(body) : undefined,
         signal: AbortSignal.timeout(30000),
       });
     } catch (e) {
@@ -35,10 +36,13 @@ async function searchPage(body) {
     }
     const text = (await res.text().catch(() => '')).slice(0, 300);
     if (res.status === 401) throw new SourceError('GoHighLevel', 'GoHighLevel rejected the token. Create a new Private Integration token and update GHL_TOKEN.', 401);
-    if (res.status === 403) throw new SourceError('GoHighLevel', 'The GoHighLevel token lacks contacts read access. Add the contacts.readonly scope to the Private Integration.', 403);
+    if (res.status === 403) throw new SourceError('GoHighLevel', `The GoHighLevel token lacks ${scope.label} access. In GoHighLevel, Settings > Private Integrations, edit the dashboard's integration and add ${scope.label} (${scope.id}).`, 403);
     throw new SourceError('GoHighLevel', `GoHighLevel returned ${res.status}: ${text}`, res.status);
   }
 }
+
+const CONTACTS = { label: 'View Contacts', id: 'contacts.readonly' };
+const EVENTS = { label: 'View Calendar Events', id: 'calendars/events.readonly' };
 
 async function searchAll(filters) {
   const all = [];
@@ -46,7 +50,7 @@ async function searchAll(filters) {
   for (let page = 0; page < 100; page++) {
     const body = { locationId: config.ghl.locationId, pageLimit: 100, filters };
     if (searchAfter) body.searchAfter = searchAfter;
-    const data = await searchPage(body);
+    const data = await request('/contacts/search', { body, scope: CONTACTS });
     const contacts = data.contacts || [];
     all.push(...contacts);
     if (contacts.length < 100) break;
@@ -67,4 +71,24 @@ async function fetchContacts() {
   return [...withStatus, ...unmarked];
 }
 
-module.exports = { fetchContacts, SourceError };
+// Every agent's calendar appointments from `since` (YYYY-MM-DD) through
+// tomorrow, one month per request.
+async function fetchAppointments(since, today) {
+  const events = [];
+  const end = addDays(today, 2);
+  for (const userId of Object.keys(AGENT_BY_ID)) {
+    for (let from = since; from < end;) {
+      const next = from.slice(0, 8) === end.slice(0, 8) ? end : addDays(from.slice(0, 8) + '01', 32).slice(0, 8) + '01';
+      const to = next < end ? next : end;
+      // Day bounds at midnight UTC, padded by a day; events are dated by their local start later.
+      const q = new URLSearchParams({ locationId: config.ghl.locationId, userId,
+        startTime: String(Date.parse(addDays(from, -1) + 'T00:00:00Z')), endTime: String(Date.parse(to + 'T00:00:00Z')) });
+      const data = await request(`/calendars/events?${q}`, { version: '2021-04-15', scope: EVENTS });
+      events.push(...(data.events || []));
+      from = to;
+    }
+  }
+  return events;
+}
+
+module.exports = { fetchContacts, fetchAppointments, SourceError };
