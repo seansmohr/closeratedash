@@ -148,6 +148,8 @@
   // Cancel/Reschedule is left out too.
   function normalizeAppointments(events, contacts, today, timeZone) {
     const statusById = new Map((contacts || []).map(c => [c.id, contactStatus(c)]));
+    // Hashed match keys, so sheet sales can be paired with appointments (addSheetSales).
+    const keysById = new Map((contacts || []).map(c => [c.id, [phoneKey(c.phone), nameKey(c.firstName, c.lastName)].filter(Boolean)]));
     const seen = new Set();
     const list = [];
     for (const e of events || []) {
@@ -175,7 +177,7 @@
         else if (/^(Showed|Sale|Cancell?ed)/i.test(st)) outcome = 'held';
         else outcome = 'unmarked';
       }
-      out.push({ agent: a.agent, date: a.date, outcome });
+      out.push({ agent: a.agent, date: a.date, outcome, keys: keysById.get(a.contact) || [] });
     }
     return out;
   }
@@ -190,6 +192,40 @@
   // Bounds are inclusive and may be 'YYYY-MM' (whole months) or 'YYYY-MM-DD' (exact days).
   const inRange = (d, from, to) => !!d && (!from || d.slice(0, from.length) >= from) && (!to || d.slice(0, to.length) <= to);
 
+  // Every sale on the Production Sheet means an appointment was held, and that
+  // appointment belongs to the App Date's week and the sheet's agent, so a sale
+  // and its appointment always land in the same period. Each application is
+  // paired with one attended (held or unmarked) calendar appointment for the
+  // same client, from 30 days before its App Date to 7 days after; the closest
+  // one on or before the App Date wins, and each appointment covers one
+  // application. The paired appointment is moved to the App Date and the sheet's
+  // agent and counts as held. An application with no such appointment adds a
+  // held appointment on its App Date. Returns appointments without match keys.
+  function addSheetSales(prod, appts) {
+    const byKey = new Map();
+    appts.forEach((a, i) => {
+      if (a.outcome === 'noshow') return;
+      for (const k of a.keys || []) { if (!byKey.has(k)) byKey.set(k, []); byKey.get(k).push(i); }
+    });
+    const used = new Map(); // appointment index -> the sale it's paired with
+    const added = [];
+    const sales = prod.filter(c => c.date).sort((x, y) => x.date.localeCompare(y.date));
+    for (const c of sales) {
+      const lo = addDays(c.date, -30), hi = addDays(c.date, 7);
+      const cands = [...new Set(c.keys.flatMap(k => byKey.get(k) || []))]
+        .filter(i => !used.has(i) && appts[i].date >= lo && appts[i].date <= hi);
+      const before = cands.filter(i => appts[i].date <= c.date).sort((i, j) => appts[j].date.localeCompare(appts[i].date));
+      const after = cands.filter(i => appts[i].date > c.date).sort((i, j) => appts[i].date.localeCompare(appts[j].date));
+      const pick = before.length ? before[0] : after[0];
+      if (pick !== undefined) used.set(pick, c);
+      else added.push({ agent: c.agent, date: c.date, outcome: 'held', sheetOnly: true });
+    }
+    return [...appts.map(({ keys, ...a }, i) => {
+      const sale = used.get(i);
+      return sale ? { ...a, agent: sale.agent, date: sale.date, outcome: 'held' } : a;
+    }), ...added];
+  }
+
   // from/to: 'YYYY-MM' or 'YYYY-MM-DD', inclusive, or null for no bound.
   // Closes and revenue come from the sheet (by App Date); booked, held and
   // no-shows come from the calendar (by appointment date).
@@ -197,7 +233,7 @@
     const soldKeys = new Set(prod.flatMap(c => c.keys));
     const byAgent = {};
     const get = a => byAgent[a] || (byAgent[a] = { agent: a, sheetClients: 0, cancelled: 0, showed: 0,
-      blank: 0, noShow: 0, proj: 0, conf: 0, clientSet: new Set() });
+      blank: 0, noShow: 0, sheetOnly: 0, proj: 0, conf: 0, clientSet: new Set() });
     const missing = [];
     for (const c of prod) {
       if (!inRange(c.date, from, to)) continue;
@@ -212,7 +248,7 @@
       const a = get(x.agent);
       if (x.outcome === 'noshow') a.noShow++;
       else if (x.outcome === 'unmarked') a.blank++;
-      else a.showed++;
+      else { a.showed++; if (x.sheetOnly) a.sheetOnly++; }
     }
     for (const g of ghl || []) {
       // Marked Sale in GoHighLevel but not on the Production Sheet: not a close; flagged.
@@ -272,6 +308,6 @@
   }
 
   return { AGENTS, AGENT_BY_ID, F_STATUS, F_WEBINAR, parseCsv, normalizeProd, normalizeProdRows, normalizeGhl,
-    normalizeAppointments, localDate,
+    normalizeAppointments, addSheetSales, localDate,
     stripMatchedLabels, compute, weekly, months, money, usDate, mondayOf, addDays };
 });

@@ -52,7 +52,7 @@
         <tbody id="score"></tbody>
       </table>
     </div>
-    <p class="note">Closes and revenue come from the Production Sheet: each client application, by App Date, is one close for the agent in the Agent column, so an add-on sale in a later month counts as its own close. Booked, held and no-show appointments come from the GoHighLevel calendar, by appointment date, credited to the agent the appointment is assigned to; appointments that haven’t happened yet aren’t counted. Revenue per close averages each application; revenue per client adds up all of a client’s applications in the selected period. Cancelled policies aren’t closes and are left out of both revenue figures. Show rate is held ÷ booked. A no-show is an appointment marked No Show on the calendar, or whose contact’s Appointment Status is No Show; cancelled and rescheduled appointments aren’t counted as booked.</p>
+    <p class="note">Closes and revenue come from the Production Sheet: each client application, by App Date, is one close for the agent in the Agent column, so an add-on sale in a later month counts as its own close. Booked, held and no-show appointments come from the GoHighLevel calendar, by appointment date, credited to the agent the appointment is assigned to; appointments that haven’t happened yet aren’t counted. Every sale on the sheet is a held appointment in its App Date’s week, for the agent in the Agent column: the client’s attended appointment (from 30 days before the App Date to 7 days after) is moved there, and a sale with no appointment adds one. Revenue per close averages each application; revenue per client adds up all of a client’s applications in the selected period. Cancelled policies aren’t closes and are left out of both revenue figures. Show rate is held ÷ booked. A no-show is an appointment marked No Show on the calendar, or whose contact’s Appointment Status is No Show; cancelled and rescheduled appointments aren’t counted as booked.</p>
   </section>
 
   <section aria-labelledby="weekH">
@@ -79,7 +79,7 @@
         </thead>
       </table>
     </div>
-    <p class="note">Weeks run Monday to Sunday. Sales are placed by App Date and appointments by appointment date, so a sale written up a few days after the appointment can land in the next week.</p>
+    <p class="note">Weeks run Monday to Sunday. Appointments are placed by appointment date, except those that led to a sale, which are placed by the sale’s App Date, so a sale and its appointment are always in the same week.</p>
   </section>
 
   <section aria-labelledby="mixH">

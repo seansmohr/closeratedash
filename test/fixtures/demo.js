@@ -27,8 +27,10 @@ function build() {
       const x = r();
       const agent = x < share.Sai ? 'Sai' : x < share.Sai + share.Sean ? 'Sean' : 'James';
       const day = 1 + Math.floor(r() * 27);
-      const date = `${month}/${day}/2026`;
       const iso = `2026-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      // The appointment, a few days after the webinar; sales are written up that day.
+      const appt = KPI.addDays(iso, Math.floor(r() * 6));
+      const apptUs = `${+appt.slice(5, 7)}/${+appt.slice(8, 10)}/2026`;
       const first = pick(FIRST), last = pick(LAST) + (n % 7);
       const phone = `1555${String(1000000 + n).slice(-7)}`;
       n++;
@@ -39,7 +41,7 @@ function build() {
         const proj = (400 + r() * 900).toFixed(2);
         const confirmed = month < 9 || r() < 0.3;
         rows.push([`${agent.toLowerCase()}@example.com`, agent, `${first} ${last}`, 'Carrier A', 'CA', pick(['MA', 'CHS', 'Med Supp']),
-          '$0.00', `$${proj}`, confirmed ? `$${proj}` : '', '', '', date, '', '', 'Yes', 'Webinar', 'One', 'One', phone]);
+          '$0.00', `$${proj}`, confirmed ? `$${proj}` : '', '', '', apptUs, '', '', 'Yes', 'Webinar', 'One', 'One', phone]);
         contact.customFields.push({ id: KPI.F_STATUS, value: 'Sale (MA)' });
       } else if (outcome < 0.34) {
         contact.customFields.push({ id: KPI.F_STATUS, value: 'Showed' });
@@ -49,16 +51,19 @@ function build() {
         contact.customFields.push({ id: KPI.F_STATUS, value: 'No Show' });
       }
       contacts.push(contact);
-      // The appointment, a few days after the webinar. About half the no-shows
-      // are marked on the calendar too; the rest only on the contact.
+      // About half the no-shows are marked on the calendar too; the rest only on the contact.
       const st = (contact.customFields.find(f => f.id === KPI.F_STATUS) || {}).value || '';
-      const appt = KPI.addDays(iso, Math.floor(r() * 6));
       events.push({ id: `evt${n}`, contactId: contact.id, assignedUserId: AGENT_IDS[agent], deleted: false,
         startTime: `${appt}T${String(9 + Math.floor(r() * 8)).padStart(2, '0')}:00:00-07:00`,
         appointmentStatus: st === 'No Show' && r() < 0.5 ? 'noshow' : 'confirmed' });
       if (r() < 0.05) events.push({ id: `evt${n}x`, contactId: contact.id, assignedUserId: AGENT_IDS[agent], deleted: false,
         startTime: `${appt}T08:00:00-07:00`, appointmentStatus: 'cancelled' });
     }
+  }
+  // A few phone sales with no appointment on the calendar.
+  for (const [agent, date] of [['Sai', '9/12/2026'], ['Sean', '9/19/2026'], ['Sai', '8/22/2026']]) {
+    rows.push([`${agent.toLowerCase()}@example.com`, agent, `Phone Sale${n++}`, 'Carrier A', 'CA', 'MA', '$0.00', '$650.00', '',
+      '', '', date, '', '', 'Yes', 'Referral', 'One', 'One', `1555${String(2000000 + n).slice(-7)}`]);
   }
   // One contact marked Sale in GoHighLevel that never made the sheet.
   contacts.push({ id: 'demo-stale', firstName: 'Wilma', lastName: 'Example', phone: '+15559999999', assignedTo: AGENT_IDS.Sai,

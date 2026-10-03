@@ -191,3 +191,45 @@ test('day bounds work in compute', () => {
   assert.equal(KPI.compute(prod, [], [], '2026-09-07', '2026-09-13').rows[0].closes, 1);
   assert.equal(KPI.compute(prod, [], [], '2026-09-14', '2026-09-20').rows.length, 0);
 });
+
+test('every sale is a held appointment in its App Date\u2019s week; one with no appointment adds one', () => {
+  const prod = KPI.normalizeProdRows([HEAD,
+    row('Sai', 'Ann Bell', '$500.00', '', '9/10/2026', '15551110040'),   // appointment Sep 9: covered
+    row('Sai', 'Ann Bell', '$200.00', '', '9/24/2026', '15551110040'),   // later add-on, appointment already used: extra
+    row('Sai', 'Bea Cole', '$400.00', '', '9/15/2026', '15551110041'),   // only a no-show: extra
+    row('Sean', 'Cal Dorn', '$300.00', '', '9/16/2026', '15551110042'),  // appointment months earlier: extra
+    row('Sai', 'Dot Eck', '-$100.00', '', '9/17/2026', '15551110043'),   // cancelled sale, appointment the same day: covered
+  ]);
+  const contacts = [
+    withId('a', contact('Ann', 'Bell', '+15551110040', SAI, 'Sale (MA)', '2026-09-01')),
+    withId('b', contact('Bea', 'Cole', '+15551110041', SAI, 'No Show', '2026-09-01')),
+    withId('c', contact('Cal', 'Dorn', '+15551110042', SEAN, 'Sale (MA)', '2026-06-01')),
+    withId('d', contact('Dot', 'Eck', '+15551110043', SAI, null, '2026-09-01')),
+  ];
+  const cal = KPI.normalizeAppointments([
+    event('a', SAI, '2026-09-09'), event('b', SAI, '2026-09-14', 'noshow'),
+    event('c', SEAN, '2026-06-05'), event('d', SAI, '2026-09-17'),
+  ], contacts, TODAY);
+  const appts = KPI.addSheetSales(prod, cal);
+  assert.ok(appts.every(a => !a.keys));
+  // Paired appointments move to the App Date; the unmarked one counts as held.
+  assert.deepEqual(appts.filter(a => !a.sheetOnly).map(a => [a.agent, a.date, a.outcome]), [
+    ['Sai', '2026-09-10', 'held'], ['Sai', '2026-09-14', 'noshow'], ['Sean', '2026-06-05', 'held'], ['Sai', '2026-09-17', 'held']]);
+  assert.deepEqual(appts.filter(a => a.sheetOnly).map(a => [a.agent, a.date]),
+    [['Sai', '2026-09-15'], ['Sean', '2026-09-16'], ['Sai', '2026-09-24']]);
+  const r = KPI.compute(prod, [], appts, '2026-09', '2026-09').rows;
+  const sai = r.find(x => x.agent === 'Sai'), sean = r.find(x => x.agent === 'Sean');
+  assert.deepEqual([sai.closes, sai.held, sai.sheetOnly, sai.noShow, sai.booked], [3, 4, 2, 1, 5]);
+  assert.deepEqual([sean.closes, sean.held, sean.closeRate], [1, 1, 1]);
+});
+
+test('an appointment on Friday with the sale written up Monday lands in the sale\u2019s week', () => {
+  const prod = KPI.normalizeProdRows([HEAD, row('James', 'Eve Ford', '$500.00', '', '9/28/2026', '15551110044')]);
+  const cal = KPI.normalizeAppointments([event('e', SAI, '2026-09-25')],
+    [withId('e', contact('Eve', 'Ford', '+15551110044', SAI, null, '2026-09-20'))], TODAY);
+  const appts = KPI.addSheetSales(prod, cal);
+  const weeks = KPI.weekly(prod, [], appts, '2026-09', '2026-09', TODAY);
+  const wk = s => weeks.find(w => w.start === s).rows;
+  assert.deepEqual(wk('2026-09-21'), []);
+  assert.deepEqual(wk('2026-09-28').map(r => [r.agent, r.closes, r.held, r.blank, r.closeRate]), [['James', 1, 1, 0, 1]]);
+});

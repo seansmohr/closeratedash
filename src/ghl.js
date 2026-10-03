@@ -71,6 +71,17 @@ async function fetchContacts() {
   return [...withStatus, ...unmarked];
 }
 
+// Specific contacts by id, 100 per request (calendar contacts the two searches above missed).
+async function fetchContactsByIds(ids) {
+  const out = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    const data = await request('/contacts/search', { scope: CONTACTS,
+      body: { locationId: config.ghl.locationId, pageLimit: 100, filters: [{ field: 'id', operator: 'eq', value: ids.slice(i, i + 100) }] } });
+    out.push(...(data.contacts || []));
+  }
+  return out;
+}
+
 // Every agent's calendar appointments from `since` (YYYY-MM-DD) through
 // tomorrow, one month per request.
 async function fetchAppointments(since, today) {
@@ -91,4 +102,4 @@ async function fetchAppointments(since, today) {
   return events;
 }
 
-module.exports = { fetchContacts, fetchAppointments, SourceError };
+module.exports = { fetchContacts, fetchContactsByIds, fetchAppointments, SourceError };

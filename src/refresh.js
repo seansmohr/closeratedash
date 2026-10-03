@@ -8,6 +8,7 @@ const KPI = require('./kpi');
 const state = {
   prod: [],
   ghl: [],
+  calAppts: [], // calendar appointments with hashed match keys (server only)
   appts: [],
   sources: {
     sheet: { ok: null, at: null, error: null },
@@ -61,7 +62,18 @@ async function runRefresh() {
   // Outcomes need the contacts' Appointment Status too, so the calendar only
   // updates when both pulls worked; otherwise the last good appointments stay.
   if (calRes.status === 'fulfilled' && ghlRes.status === 'fulfilled') {
-    state.appts = KPI.normalizeAppointments(calRes.value, ghlRes.value, today, config.timezone);
+    const contacts = ghlRes.value;
+    // Contacts on the calendar that neither search returned (blank status, no
+    // "scheduled" tag): fetch them so their appointments can be matched to sales.
+    if (!config.demoData) {
+      const have = new Set(contacts.map(c => c.id));
+      const missing = [...new Set(calRes.value.map(e => e.contactId).filter(id => id && !have.has(id)))];
+      if (missing.length) {
+        try { contacts.push(...await require('./ghl').fetchContactsByIds(missing)); }
+        catch (e) { console.error('[refresh] calendar contacts:', e.message); }
+      }
+    }
+    state.calAppts = KPI.normalizeAppointments(calRes.value, contacts, today, config.timezone);
     state.sources.calendar = { ok: true, at: now, error: null };
   } else if (calRes.status === 'rejected') {
     state.sources.calendar = { ...state.sources.calendar, ok: false, error: calRes.reason.message };
@@ -69,6 +81,7 @@ async function runRefresh() {
   }
 
   state.ghl = KPI.stripMatchedLabels(state.prod, state.ghl);
+  state.appts = KPI.addSheetSales(state.prod, state.calAppts);
   if (sheetRes.status === 'fulfilled' || ghlRes.status === 'fulfilled' || calRes.status === 'fulfilled') state.pulledAt = now;
   console.log(`[refresh] ${state.prod.length} applications, ${state.appts.length} past appointments, ${state.ghl.length} GoHighLevel sales`);
 }

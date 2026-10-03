@@ -57,8 +57,14 @@ dashboard behind Google sign-in (jmohrins.com accounts only).
     `No Show…` → no-show; `Showed…`, `Sale…`, `Cancelled` → held; `Cancel/Reschedule` → not booked
   - anything else (still `confirmed`, status blank or on an earlier appointment): held, "unmarked";
     the dashboard has a toggle to exclude these
-  - held = marked held + unmarked; booked = held + no-shows. Closes stay from the sheet, so a
-    week's close rate can top 100% when sales are written up after the appointment week.
+  - **Every sheet sale is a held appointment in its App Date's week** (`KPI.addSheetSales`): each
+    application is paired with one attended (held or unmarked) appointment for the same client
+    (hashed phone or name), from 30 days before its App Date to 7 days after, closest on or before
+    the App Date first. The paired appointment moves to the App Date and the sheet's agent and
+    counts as held. An application with no such appointment (phone sale, add-on, only a no-show)
+    adds a held appointment there. Cancelled applications count too. So closes ≤ held in every
+    week and month.
+  - held = marked held + unmarked + sheet-only sales; booked = held + no-shows.
 - **GoHighLevel contacts** supply the Appointment Status above and the Needs cleanup list: a contact
   marked `Sale (…)` with no sheet match (phone last 10 digits, or first+last name) is listed there
   and not counted as a close (Sean confirmed these are cancels).

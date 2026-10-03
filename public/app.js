@@ -125,7 +125,7 @@
     const byAgent = Object.fromEntries(rows.map(r => [r.agent, r]));
 
     $('score').innerHTML = KPI.AGENTS.map(agent => {
-      const r = byAgent[agent] || { held: 0, closes: 0, clients: 0, blank: 0, noShow: 0, projPerClose: null, confPerClose: null, projPerClient: null, confPerClient: null };
+      const r = byAgent[agent] || { held: 0, closes: 0, clients: 0, blank: 0, noShow: 0, sheetOnly: 0, projPerClose: null, confPerClose: null, projPerClient: null, confPerClient: null };
       const { held, booked, show } = counts(r, countBlank);
       const rate = held ? r.closes / held : null;
       const m = manualFor(agent);
@@ -134,7 +134,7 @@
       return `<tr>
         <td class="agent">${agent}</td>
         <td><span class="big">${m.calls == null ? '—' : Math.round(m.calls)}</span><span class="sub">${m.callDays ? m.callDays + ' day' + (m.callDays > 1 ? 's' : '') + ' logged' : 'Not logged'}</span></td>
-        <td><span class="big">${held}</span><span class="sub">${r.blank && countBlank ? r.blank + ' unmarked' : '&nbsp;'}</span></td>
+        <td><span class="big">${held}</span><span class="sub">${r.blank && countBlank ? r.blank + ' unmarked' : '&nbsp;'}</span><span class="sub">${r.sheetOnly ? `+${r.sheetOnly} sale${r.sheetOnly > 1 ? 's' : ''}, no appt` : '&nbsp;'}</span></td>
         <td><span class="big">${fmtPct(show)}</span><span class="sub">${held} of ${booked}</span><span class="sub">${r.noShow} no-show${r.noShow === 1 ? '' : 's'}</span></td>
         <td><span class="big">${fmtPct(rate)}</span><span class="sub">${r.closes} of ${held}</span></td>
         <td><span class="big">${fmtMoney(r.projPerClose)}</span><span class="sub">${r.closes ? fmtMoney(r.confPerClose) + ' confirmed' : '&nbsp;'}</span><span class="sub">${r.closes} close${r.closes === 1 ? '' : 's'}</span></td>
