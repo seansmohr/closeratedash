@@ -147,8 +147,8 @@
         <span><i class="c-green"></i>Green: ${fmtMoney(g)} and up</span>
         ${board === 'week' ? `<span>★ Top earner gets a $${Boards.WEEKLY_BONUS} bonus (ties both get it)</span>` : ''}`;
     } else {
-      $('legend').innerHTML = `<span><i class="r-common"></i>Common: under ${fmtK(tiers[0].at)}</span>` +
-        tiers.map(t => `<span><i class="r-${t.rarity}"></i>${Boards.RARITY_NAMES[t.rarity]}: ${fmtK(t.at)} · ${fmtMoney(t.bonus)}</span>`).join('');
+      $('legend').innerHTML = `<span><i class="r-common"></i>Under ${fmtK(tiers[0].at)}</span>` +
+        tiers.map(t => `<span><i class="r-${t.rarity}"></i>${fmtK(t.at)} · ${fmtMoney(t.bonus)}</span>`).join('');
     }
     $('boardNote').textContent = {
       year: 'From the Agent Production tab of the master workbook: projected revenue by App Date for the year in its Year cell.',
