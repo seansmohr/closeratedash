@@ -4,16 +4,19 @@
 // Calendar events are reduced to agent + appointment day + outcome.
 const { config, todayLocal } = require('./config');
 const KPI = require('./kpi');
+const Boards = require('./boards');
 
 const state = {
   prod: [],
   ghl: [],
   calAppts: [], // calendar appointments with hashed match keys (server only)
   appts: [],
+  boards: null, // leaderboards from the master workbook (per-agent totals only)
   sources: {
     sheet: { ok: null, at: null, error: null },
     ghl: { ok: null, at: null, error: null },
     calendar: { ok: null, at: null, error: null },
+    master: { ok: null, at: null, error: null },
   },
   pulledAt: null,
   refreshing: null, // the in-flight promise
@@ -34,10 +37,24 @@ async function pullCalendar(today) {
   return require('./ghl').fetchAppointments('2026-01-01', today);
 }
 
+async function pullMaster(year) {
+  if (config.demoData) return require('../test/fixtures/demo').masterTabs();
+  return require('./sheet').fetchMasterTabs(year);
+}
+
 async function runRefresh() {
   const today = todayLocal();
-  const [sheetRes, ghlRes, calRes] = await Promise.allSettled([pullSheet(), pullGhl(), pullCalendar(today)]);
+  const year = +today.slice(0, 4);
+  const [sheetRes, ghlRes, calRes, masterRes] = await Promise.allSettled([pullSheet(), pullGhl(), pullCalendar(today), pullMaster(year)]);
   const now = new Date().toISOString();
+
+  if (masterRes.status === 'fulfilled') {
+    state.boards = Boards.parseWorkbook(masterRes.value, year);
+    state.sources.master = { ok: true, at: now, error: null };
+  } else {
+    state.sources.master = { ...state.sources.master, ok: false, error: masterRes.reason.message };
+    console.error('[refresh] master workbook:', masterRes.reason.message);
+  }
 
   if (sheetRes.status === 'fulfilled') {
     try {
@@ -82,7 +99,7 @@ async function runRefresh() {
 
   state.ghl = KPI.stripMatchedLabels(state.prod, state.ghl);
   state.appts = KPI.addSheetSales(state.prod, state.calAppts);
-  if (sheetRes.status === 'fulfilled' || ghlRes.status === 'fulfilled' || calRes.status === 'fulfilled') state.pulledAt = now;
+  if ([sheetRes, ghlRes, calRes, masterRes].some(r => r.status === 'fulfilled')) state.pulledAt = now;
   console.log(`[refresh] ${state.prod.length} applications, ${state.appts.length} past appointments, ${state.ghl.length} GoHighLevel sales`);
 }
 
@@ -116,4 +133,16 @@ function snapshot() {
   };
 }
 
-module.exports = { refresh, startSchedule, snapshot };
+function boardsSnapshot() {
+  return {
+    ...(state.boards || { boards: {}, errors: {} }),
+    today: todayLocal(),
+    pulledAt: state.sources.master.at,
+    refreshing: !!state.refreshing,
+    refreshMinutes: config.refreshMinutes,
+    source: state.sources.master,
+    demo: config.demoData,
+  };
+}
+
+module.exports = { refresh, startSchedule, snapshot, boardsSnapshot };

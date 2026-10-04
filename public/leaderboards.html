@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mohr Leaderboards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="head-text">
+      <span class="eyebrow">Mohr Insurance Services</span>
+      <h1>Leaderboards</h1>
+      <div class="fresh">
+        <span id="fresh">Loading data…</span>
+        <span id="liveStatus" class="status" role="status" aria-live="polite"></span>
+      </div>
+    </div>
+    <div class="controls">
+      <label class="control" for="period" id="periodWrap" hidden><span id="periodLabel">Period</span>
+        <select id="period"></select>
+      </label>
+      <button class="btn" id="refresh" type="button">Refresh now</button>
+      <a class="btn ghost" href="/">Scorecard</a>
+    </div>
+  </header>
+  <div class="userbar"><span id="who"></span><a href="/auth/logout">Sign out</a></div>
+  <div id="banners"></div>
+
+  <nav class="lb-tabs" role="tablist" aria-label="Leaderboards">
+    <button type="button" role="tab" id="tab-year" data-board="year" aria-controls="board">Year</button>
+    <button type="button" role="tab" id="tab-month" data-board="month" aria-controls="board">Month</button>
+    <button type="button" role="tab" id="tab-week" data-board="week" aria-controls="board">Week</button>
+    <button type="button" role="tab" id="tab-quarter" data-board="quarter" aria-controls="board">Quarterly bonus</button>
+    <button type="button" role="tab" id="tab-ancillary" data-board="ancillary" aria-controls="board">Ancillary premium</button>
+  </nav>
+
+  <section id="board" role="tabpanel" aria-labelledby="boardH">
+    <div class="section-head">
+      <h2 id="boardH"></h2>
+      <span class="muted" id="boardSub"></span>
+    </div>
+    <div class="panel lb-panel">
+      <div class="lb-chart" id="chart"></div>
+      <div class="legend lb-legend" id="legend"></div>
+    </div>
+    <p class="note" id="boardNote"></p>
+  </section>
+</div>
+<div class="lb-tip" id="tip" role="tooltip" hidden></div>
+<script src="/boards.js"></script>
+<script src="/leaderboards.js"></script>
+</body>
+</html>

@@ -66,6 +66,8 @@ app.use('/api', (req, res, next) => {
 });
 
 app.get('/kpi.js', (req, res) => res.type('application/javascript').sendFile(path.join(__dirname, 'kpi.js')));
+app.get('/boards.js', (req, res) => res.type('application/javascript').sendFile(path.join(__dirname, 'boards.js')));
+app.get('/leaderboards', (req, res) => res.sendFile(path.join(pub, 'leaderboards.html')));
 app.use(express.static(pub, { index: 'index.html', maxAge: 0 }));
 
 app.get('/api/me', (req, res) => res.json({ email: req.user.email, name: req.user.name, agents: AGENTS }));
@@ -75,6 +77,13 @@ app.get('/api/data', (req, res) => res.json(refresher.snapshot()));
 app.post('/api/refresh', async (req, res) => {
   await refresher.refresh({ minGapMs: 60000 });
   res.json(refresher.snapshot());
+});
+
+app.get('/api/boards', (req, res) => res.json(refresher.boardsSnapshot()));
+
+app.post('/api/boards/refresh', async (req, res) => {
+  await refresher.refresh({ minGapMs: 60000 });
+  res.json(refresher.boardsSnapshot());
 });
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;

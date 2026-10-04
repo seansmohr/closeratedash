@@ -26,6 +26,11 @@ const config = {
     serviceAccountJson: env.GOOGLE_SERVICE_ACCOUNT_JSON || '',
   },
 
+  // The master production workbook: its summary tabs feed the leaderboards.
+  master: {
+    id: env.MASTER_SHEET_ID || '1YVvXDVkLQmjQ8zgWlC_Ax-qiP9u8uh2wQfALA53KhOc',
+  },
+
   auth: {
     // "google", "password" or "dev". Setting DASHBOARD_PASSWORD picks "password": one shared
     // password the browser asks for. dev skips sign-in and is refused in production.

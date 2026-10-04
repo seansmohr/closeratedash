@@ -36,4 +36,30 @@ async function fetchRows() {
   }
 }
 
-module.exports = { fetchRows };
+// The summary tabs of the master workbook (Agent Production, Weekly & Close
+// Analysis, Quarterly Rev, Premium Production and the month tabs) for the
+// leaderboards. Returns { [tab title]: rows }. These tabs hold per-agent totals only.
+async function fetchMasterTabs(year) {
+  const { tabsToRead } = require('./boards');
+  const c = getClient();
+  const base = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(config.master.id)}`;
+  try {
+    const meta = await c.request({ url: `${base}?fields=sheets.properties.title`, timeout: 30000, retry: true });
+    const titles = tabsToRead((meta.data.sheets || []).map(s => s.properties.title), year);
+    if (!titles.length) throw new SourceError('Master workbook', 'None of the leaderboard tabs were found in the master workbook.');
+    const qs = titles.map(t => 'ranges=' + encodeURIComponent(`'${t.replace(/'/g, "''")}'!A1:Z120`)).join('&');
+    const res = await c.request({ url: `${base}/values:batchGet?${qs}&valueRenderOption=FORMATTED_VALUE`, timeout: 30000, retry: true });
+    const out = {};
+    (res.data.valueRanges || []).forEach((vr, i) => { out[titles[i]] = vr.values || []; });
+    return out;
+  } catch (e) {
+    if (e instanceof SourceError) throw e;
+    const status = e.response && e.response.status;
+    if (status === 403 || status === 404) {
+      throw new SourceError('Master workbook', `The service account can't open the master workbook. Share it with ${c.serviceEmail} as a Viewer.`, status);
+    }
+    throw new SourceError('Master workbook', `Couldn't read the master workbook (${status || e.message}).`, status);
+  }
+}
+
+module.exports = { fetchRows, fetchMasterTabs };

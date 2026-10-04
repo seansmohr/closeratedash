@@ -71,5 +71,68 @@ function build() {
   return { rows, contacts, events };
 }
 
+// The master workbook's summary tabs, laid out like the real ones (header text,
+// helper columns, Total rows), with invented per-agent totals. Picked to show
+// every bar color, a weekly tie and the top ancillary tier.
+function masterTabs(year = new Date().getFullYear()) {
+  const $ = n => '$' + Math.round(n).toLocaleString('en-US');
+  const agents = ['Sai', 'Sean', 'James'];
+  const tabs = {};
+  tabs['Agent Production'] = [
+    ['Agent Production & Averages'], ['Year:', String(year), 'Blue cell is the only input on this tab.'], [], [],
+    ['Agent', 'Policies', 'Clients', 'Policies / Client', 'Premium Written', 'Avg Premium / Policy', 'Projected Rev', 'Confirmed Rev'],
+    ['Sai', '210', '130', '1.6', '$14,000', '$66', $(251300), $(170000)],
+    ['Sean', '90', '60', '1.5', '$6,000', '$66', $(196400), $(120000)],
+    ['James', '40', '28', '1.4', '$3,000', '$75', $(88250), $(40000)],
+    ['Agency Total', '340', '218', '1.6', '$23,000', '$67', $(535950), $(330000)],
+  ];
+  tabs['Premium Production'] = [
+    ['Ancillary Premium Production'], ['Year:', String(year)], [], [], ['Annual Summary'],
+    ['Agent', 'Ancillary Policies', 'Monthly Premium Written', 'Annualized Premium (AP)', 'Avg Monthly Premium / Policy', '% of Agency AP'],
+    ['Sai', '180', '$17,000', $(204000), '$94', '61%'],
+    ['Sean', '70', '$8,700', $(104400), '$124', '31%'],
+    ['James', '15', '$2,300', $(27600), '$153', '8%'],
+    ['Agency Total', '265', '$28,000', $(336000), '$106', '100%'],
+  ];
+  const q = [[52000, 21000, 9000], [96500, 48000, 22000], [131000, 73500, 41000], [18000, 6000, 2500]];
+  tabs['Quarterly Rev'] = [
+    ['Quarterly Rev'], ['Year:', String(year)], ['Bonus based on:', 'Confirmed'], [], ['Bonus Tiers'], ['Quarterly Revenue', 'Bonus'], [],
+    ['Projected Revenue by Quarter'], ['Quarter', ...agents, 'Agency'],
+    ...q.map((v, i) => [`Q${i + 1}`, ...v.map($), $(v[0] + v[1] + v[2])]),
+    ['Year Total', '', '', '', ''], [],
+    // A confirmed table with different numbers, which must never be used.
+    ['Confirmed Revenue by Quarter'], ['Quarter', ...agents, 'Agency'],
+    ...q.map((v, i) => [`Q${i + 1}`, '$1', '$1', '$1', '$3']),
+  ];
+  const weekly = [['Weekly Revenue by Agent'], ['Source: Production Sheet'], [],
+    ['Week', 'Sai Proj', 'Sai Conf', 'Sean Proj', 'Sean Conf', 'James Proj', 'James Conf', 'Total Proj', 'Total Conf']];
+  const short = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const day = d => `${short[d.getUTCMonth()]} ${d.getUTCDate()}`;
+  const r = rng(7);
+  let monday = new Date(Date.UTC(year, 0, 1));
+  monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+  for (let w = 0; monday.getUTCFullYear() <= year; w++) {
+    const end = new Date(monday.getTime() + 6 * 864e5);
+    const iso = monday.toISOString().slice(0, 10);
+    let v = [r() * 7000, r() * 5200, r() * 3000];
+    if (w % 9 === 4) v = [4800, 4800, 1200]; // a tie for the weekly bonus
+    weekly.push([`${day(monday)} - ${day(end)}`, $(v[0]), '$0', $(v[1]), '$0', $(v[2]), '$0', $(v[0] + v[1] + v[2]), '$0', '', iso]);
+    monday = new Date(monday.getTime() + 7 * 864e5);
+  }
+  weekly.push(['TOTAL', '$0', '$0', '$0', '$0', '$0', '$0', '$0', '$0']);
+  tabs['Weekly & Close Analysis'] = weekly;
+  const monthNames = ['Jan', 'Feb', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  monthNames.forEach((m, i) => {
+    const v = [8000 + r() * 16000, 6000 + r() * 12000, 2000 + r() * 9000];
+    tabs[`${m} Production ${year}`] = [[], [], ['Policy Type', 'Sai App Count'], ['Totals', '0'], [], [],
+      ['Writing Agent', 'App count', 'Projected Rev', 'Confirmed Rev', 'Projected Commission', 'Confirmed Commission'],
+      ...agents.map((a, j) => [a, '10', $(v[j]) + '.00', '$0.00', '$0.00', '$0.00']),
+      ['Totals', '30', $(v[0] + v[1] + v[2]), '$0.00', '$0.00', '$0.00'], [], [],
+      ['Agent Name', 'One call closes'], ['Sai', '5']];
+  });
+  return tabs;
+}
+
 const data = build();
-module.exports = { prodRows: async () => data.rows, contacts: async () => data.contacts, events: async () => data.events };
+module.exports = { prodRows: async () => data.rows, contacts: async () => data.contacts, events: async () => data.events,
+  masterTabs: async () => masterTabs() };

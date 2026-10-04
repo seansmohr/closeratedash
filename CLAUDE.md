@@ -18,6 +18,8 @@ dashboard behind Google sign-in (jmohrins.com accounts only).
   `GET /calendars/events` (per agent, one month per request). Private Integration token with
   View Contacts and View Calendar Events
 - `src/sheet.js`: Google Sheets values API with a service account
+- `src/boards.js`: Leaderboards: parses the master workbook's summary tabs and holds the color and
+  bonus-tier rules. UMD-wrapped like `kpi.js`, served at `/boards.js`. Page: `public/leaderboards.*`
 - `src/refresh.js`: scheduled pull; keeps the last good data per source in memory
 - `src/store.js`: Postgres `daily_log` table (manual calls and confirmation counts)
 - `src/auth.js`: Google OAuth, restricted to `ALLOWED_DOMAIN`; or one shared password (HTTP Basic)
@@ -37,6 +39,24 @@ dashboard behind Google sign-in (jmohrins.com accounts only).
 5. **Day-before confirmation calls**: entered by hand. Confirmation calls ÷ next-day appointments.
    Goal 2, ideal 3.
 6. **Show rate** = held ÷ booked. Monthly and weekly.
+
+## Leaderboards (`/leaderboards`, agreed with Sean)
+
+Read straight from the master workbook's summary tabs (found by header text), not recomputed.
+Projected revenue except Ancillary. Highest earner on top. Month, week and quarter default to the
+current one with a dropdown for earlier ones.
+
+1. **Year**: Agent Production, Projected Rev. Red < $180k, yellow < $240k, green $240k+
+2. **Month**: "<Month> Production <year>" tab, Writing Agent table, Projected Rev. Red < $15k,
+   yellow < $20k, green $20k+
+3. **Week**: Weekly & Close Analysis, "<Agent> Proj" columns (Monday date in a helper column).
+   Red < $4k, yellow < $5k, green $5k+. Top earner gets a $100 bonus; ties all get it; nobody in a
+   $0 week
+4. **Quarterly bonus**: Quarterly Rev, always the Projected Revenue by Quarter table. $70k $1,000
+   (green), $90k $2,000 (blue), $120k $3,000 (purple), $150k $4,000 (gold); below is white
+5. **Ancillary premium**: Premium Production, Annualized Premium (AP). $50k $500 (green), $100k $750
+   (blue), $125k $1,000 (purple), $150k $1,250 (gold), $175k $1,500 (light blue), $200k $1,750
+   (rainbow); below is white. Colors follow Borderlands gun rarity
 
 ## Rules
 
@@ -74,7 +94,8 @@ dashboard behind Google sign-in (jmohrins.com accounts only).
 
 ## Privacy
 
-GoHighLevel is HIPAA-flagged. Raw contacts, calendar events and sheet rows stay in memory only; the app keeps
+GoHighLevel is HIPAA-flagged. Raw contacts, calendar events and sheet rows stay in memory only (the leaderboard
+tabs hold per-agent totals only); the app keeps
 hashed match keys, dates, dollar amounts and outcomes. Client names reach the browser only for the
 Needs cleanup list. Postgres holds only the daily log. Don't log contact data.
 

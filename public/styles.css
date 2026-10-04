@@ -139,3 +139,65 @@ table.weekly tbody.wk { border-top: 2px solid var(--line); }
 table.weekly tbody.wk tr td { border-bottom: 1px solid var(--line); }
 table.weekly .wk-label { font-family: var(--font-display); font-size: .95rem; text-transform: none; letter-spacing: 0; color: var(--ink); white-space: nowrap; vertical-align: top; border-bottom: 1px solid var(--line); }
 table.weekly .pill { margin-top: 0; }
+
+/* Leaderboards: horizontal bars, highest first. Revenue tabs use red/yellow/green;
+   bonus tabs use Borderlands gun rarity, with dashed lines at each bonus point. */
+:root {
+  --bar-red: #d9443c; --bar-yellow: #efbc22; --bar-green: #3a9d4a;
+  --r-common: #ffffff; --r-common-edge: #9aabb4;
+  --r-uncommon: #3ea34c; --r-rare: #2f6fe0; --r-epic: #8a3fd1; --r-legendary: #e9a516; --r-pearlescent: #5ccbea;
+  --lb-mark: #5d7482;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bar-red: #e5594f; --bar-yellow: #f2c53a; --bar-green: #4fb05c; --r-common: #f2f5f6; --r-common-edge: #f2f5f6; --r-rare: #4a86f0; --r-epic: #a25ce6; --lb-mark: #9db2bd; }
+}
+:root[data-theme="dark"] { --bar-red: #e5594f; --bar-yellow: #f2c53a; --bar-green: #4fb05c; --r-common: #f2f5f6; --r-common-edge: #f2f5f6; --r-rare: #4a86f0; --r-epic: #a25ce6; --lb-mark: #9db2bd; }
+
+.lb-tabs { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); }
+.lb-tabs [role=tab] { background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 12px; margin-bottom: -1px; font-weight: 600; color: var(--muted); }
+.lb-tabs [role=tab][aria-selected=true] { color: var(--ink); border-bottom-color: var(--brand); }
+.lb-tabs [role=tab]:hover { color: var(--ink); }
+a.btn { text-decoration: none; display: inline-block; }
+
+.lb-panel { padding: 18px 16px 14px; display: grid; gap: 14px; }
+.lb-chart { --lb-name: 132px; --lb-val: 96px; --lb-gap: 14px; position: relative; }
+.lb-rows { display: grid; gap: 16px; position: relative; }
+.lb-rows.has-marks { padding-top: 40px; }
+.lb-row { display: grid; grid-template-columns: var(--lb-name) minmax(0, 1fr) var(--lb-val); column-gap: var(--lb-gap); row-gap: 4px; align-items: center; border-radius: 6px; }
+.lb-row:focus-visible { outline-offset: 4px; }
+.lb-name { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; display: grid; gap: 2px; justify-items: start; min-width: 0; overflow-wrap: anywhere; }
+.lb-track { height: 26px; position: relative; }
+.lb-bar { height: 100%; min-width: 3px; border-radius: 0 4px 4px 0; }
+.lb-val { font-size: 1.05rem; text-align: right; white-space: nowrap; }
+.lb-status { grid-column: 2 / 4; font-size: .8rem; color: var(--muted); }
+.lb-badge { font-family: var(--font-body); font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--r-legendary); color: #2b1d00; white-space: nowrap; }
+.c-red { background: var(--bar-red); } .c-yellow { background: var(--bar-yellow); } .c-green { background: var(--bar-green); }
+.r-common { background: var(--r-common); box-shadow: inset 0 0 0 1.5px var(--r-common-edge); }
+.r-uncommon { background: var(--r-uncommon); } .r-rare { background: var(--r-rare); } .r-epic { background: var(--r-epic); }
+.r-legendary { background: var(--r-legendary); } .r-pearlescent { background: var(--r-pearlescent); }
+.r-effervescent { background: linear-gradient(90deg, #ff4d4d, #ffa31a, #ffe11a, #3fd16b, #26b5ff, #7a5cff, #ff4dd2, #ff4d4d); background-size: 200% 100%; }
+@media (prefers-reduced-motion: no-preference) {
+  .r-effervescent { animation: lb-shimmer 4s linear infinite; }
+  .lb-bar { transition: width .4s ease; }
+}
+@keyframes lb-shimmer { to { background-position: -200% 0; } }
+
+/* Dashed bonus lines: an overlay lined up with the bar column. */
+.lb-marks { position: absolute; inset: 0 calc(var(--lb-val) + var(--lb-gap)) 0 calc(var(--lb-name) + var(--lb-gap)); pointer-events: none; z-index: 1; }
+.lb-mark { position: absolute; top: 0; bottom: 0; border-left: 1.5px dashed var(--lb-mark); }
+.lb-mark span { position: absolute; top: 0; transform: translateX(-50%); font: 500 .72rem/1.2 var(--font-num); color: var(--muted); text-align: center; white-space: nowrap; background: var(--surface); padding: 0 2px; }
+.lb-mark span b { display: block; font-weight: 500; color: var(--ink); }
+.lb-legend i { box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+.lb-legend i.r-effervescent { animation: none; }
+.lb-tip { position: fixed; z-index: 10; background: var(--ink); color: var(--surface); font-size: .82rem; line-height: 1.4; padding: 8px 10px; border-radius: 6px; white-space: pre-line; pointer-events: none; max-width: 260px; }
+@media (max-width: 640px) {
+  .lb-chart { --lb-name: 78px; --lb-val: 74px; --lb-gap: 8px; }
+  .lb-name { font-size: .95rem; }
+  .lb-val { font-size: .9rem; }
+  /* Narrow: just the threshold, staggered over three rows; the legend has the bonus amounts. */
+  .lb-mark span { font-size: .66rem; }
+  .lb-mark span b { display: none; }
+  .lb-mark:nth-child(3n+2) span { top: 13px; }
+  .lb-mark:nth-child(3n) span { top: 26px; }
+  .lb-rows.has-marks { padding-top: 46px; }
+}

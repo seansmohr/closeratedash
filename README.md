@@ -30,7 +30,7 @@ Google sign-in client, and the Railway project.
    **View Calendar Events** (`calendars/events.readonly`).
 3. Copy the token. It's `GHL_TOKEN`. GoHighLevel recommends rotating these tokens every 90 days.
 
-### 2. Google service account (reads the Production Sheet)
+### 2. Google service account (reads the Production Sheet and the master workbook)
 
 1. In [Google Cloud Console](https://console.cloud.google.com), create a project named `mohr-sales-kpi`.
 2. **APIs & Services → Library**: enable **Google Sheets API**.
@@ -40,6 +40,9 @@ Google sign-in client, and the Railway project.
 5. Share the **Master Production Live Feed** sheet with the service account's email
    (`…@….iam.gserviceaccount.com`) as **Viewer**. If Google blocks it, your Workspace admin
    settings restrict sharing outside jmohrins.com; allow it for this address.
+6. Share the **master production workbook** with the same email as **Viewer** too. The
+   Leaderboards page reads its Agent Production, Weekly & Close Analysis, Quarterly Rev, Premium
+   Production and "<Month> Production <year>" tabs.
 
 If the dashboard ever shows the sheet as empty, the IMPORTRANGE mirror hasn't loaded. You can skip
 the mirror: share the master workbook with the service account instead and set
