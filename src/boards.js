@@ -79,6 +79,16 @@
     return top > 0 ? rows.filter(r => r.value === top).map(r => r.agent) : [];
   }
 
+  // Today's production: projected revenue of the Production Sheet applications dated
+  // today, per agent (cancelled rows net against it, as on the sheet). Every listed
+  // agent appears, at $0 if they haven't sold yet.
+  function dayTotals(prod, date, agents) {
+    const by = new Map((agents || []).map(a => [a, 0]));
+    for (const r of prod || []) if (r.date === date && r.agent) by.set(r.agent, (by.get(r.agent) || 0) + (r.proj || 0));
+    return [...by].map(([agent, value]) => ({ agent, value: Math.round(value * 100) / 100 }));
+  }
+  const total = rows => Math.round((rows || []).reduce((s, r) => s + r.value, 0) * 100) / 100;
+
   // ---- Parsing the workbook ----
 
   function money(s) {
@@ -228,7 +238,7 @@
     return titles.filter(t => want.includes(t) || (monthOfTab(t) || '').slice(0, 4) === String(year));
   }
 
-  return { TABS, MONTHS, BANDS, TIERS, RARITY_NAMES, WEEKLY_BONUS, band, tier, rank, weekWinners,
+  return { TABS, MONTHS, BANDS, TIERS, RARITY_NAMES, WEEKLY_BONUS, band, tier, rank, weekWinners, dayTotals, total,
     money, monthOfTab, addDays, parseYear, parseAncillary, parseMonthTab, parseWeeks, parseQuarters,
     parseWorkbook, tabsToRead };
 });

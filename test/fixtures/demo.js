@@ -65,6 +65,13 @@ function build() {
     rows.push([`${agent.toLowerCase()}@example.com`, agent, `Phone Sale${n++}`, 'Carrier A', 'CA', 'MA', '$0.00', '$650.00', '',
       '', '', date, '', '', 'Yes', 'Referral', 'One', 'One', `1555${String(2000000 + n).slice(-7)}`]);
   }
+  // A few sales today, for the leaderboards' daily total.
+  const t = new Date();
+  const todayUs = `${t.getMonth() + 1}/${t.getDate()}/${t.getFullYear()}`;
+  for (const [agent, proj] of [['Sai', '$1,240.00'], ['Sai', '$615.50'], ['Sean', '$880.00']]) {
+    rows.push([`${agent.toLowerCase()}@example.com`, agent, `Today Sale${n++}`, 'Carrier A', 'CA', 'CHS', '$60.00', proj, '',
+      '', '', todayUs, '', '', 'Yes', 'Webinar', 'One', 'One', `1555${String(3000000 + n).slice(-7)}`]);
+  }
   // One contact marked Sale in GoHighLevel that never made the sheet.
   contacts.push({ id: 'demo-stale', firstName: 'Wilma', lastName: 'Example', phone: '+15559999999', assignedTo: AGENT_IDS.Sai,
     tags: ['scheduled'], customFields: [{ id: KPI.F_STATUS, value: 'Sale (Umbrella)' }, { id: KPI.F_WEBINAR, value: '2026-09-10T00:00:00.000Z' }] });

@@ -108,3 +108,16 @@ test('a broken tab blanks only its own board', () => {
   assert.match(p.errors.week, /missing/);
   assert.match(p.errors.month, /No "<Month> Production 2026" tabs/);
 });
+
+test("today's production: net projected revenue per agent, everyone listed", () => {
+  const prod = [
+    { agent: 'Sai', date: '2026-11-05', proj: 500 },
+    { agent: 'Sai', date: '2026-11-05', proj: 120.25 },
+    { agent: 'Sai', date: '2026-11-04', proj: 999 },
+    { agent: 'Sean', date: '2026-11-05', proj: -80 },
+    { agent: 'Pat', date: '2026-11-05', proj: 40 },
+  ];
+  const rows = Boards.dayTotals(prod, '2026-11-05', ['Sai', 'Sean', 'James']);
+  assert.deepEqual(rows, [{ agent: 'Sai', value: 620.25 }, { agent: 'Sean', value: -80 }, { agent: 'James', value: 0 }, { agent: 'Pat', value: 40 }]);
+  assert.equal(Boards.total(rows), 580.25);
+});

@@ -44,6 +44,9 @@ Google sign-in client, and the Railway project.
    Leaderboards page reads its Agent Production, Weekly & Close Analysis, Quarterly Rev, Premium
    Production and "<Month> Production <year>" tabs.
 
+The Leaderboards page (`/leaderboards`) needs no sign-in, so the team can open it or leave it on a
+TV. It shows per-agent revenue totals only; the scorecard and daily log still need sign-in.
+
 If the dashboard ever shows the sheet as empty, the IMPORTRANGE mirror hasn't loaded. You can skip
 the mirror: share the master workbook with the service account instead and set
 `SHEET_ID=1YVvXDVkLQmjQ8zgWlC_Ax-qiP9u8uh2wQfALA53KhOc` and `SHEET_RANGE='Production Sheet'!A:U`.

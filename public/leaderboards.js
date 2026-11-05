@@ -24,7 +24,6 @@
 
   async function api(path, opts = {}) {
     const res = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' });
-    if (res.status === 401) { location.href = '/signin'; throw new Error('Signed out'); }
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.error || `Request failed (${res.status})`);
     return body;
@@ -102,8 +101,36 @@
     return { cls: `r-${t.rarity}`, status: `${name} · ${bonus} · ${next}`, tip: [`${name} tier`, bonus, next], rarity: name };
   }
 
+  // Big "produced today" panel: the team's total, then each agent.
+  function renderToday() {
+    const day = data.day || { rows: [] };
+    const rows = Boards.rank(day.rows || []);
+    const total = Boards.total(rows);
+    $('todayTotal').textContent = fmtMoney(total);
+    $('todayDate').textContent = day.date
+      ? new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+      : '';
+    const max = Math.max(1, ...rows.map(r => r.value));
+    $('todayAgents').innerHTML = rows.map(r => `<div class="lb-day">
+        <span class="lb-day-name">${esc(r.agent)}</span>
+        <span class="lb-day-val num">${fmtMoney(r.value)}</span>
+        <span class="lb-day-bar"><i style="width:${Math.max(0, (r.value / max) * 100)}%"></i></span>
+      </div>`).join('') || '<p class="lb-day-empty">No sales logged yet today.</p>';
+    const src = day.source || {};
+    $('todayNote').textContent = src.ok === false
+      ? 'Couldn’t reach the Production Sheet; showing the last numbers it sent.'
+      : 'Projected revenue on today’s Production Sheet applications, by App Date.';
+  }
+
+  // Rank numbers; tied agents share one.
+  function ranks(rows) {
+    let prev = null, rank = 0;
+    return rows.map((r, i) => { if (r.value !== prev) { rank = i + 1; prev = r.value; } return rank; });
+  }
+
   function render() {
     renderBanners();
+    renderToday();
     document.querySelectorAll('.lb-tabs [role=tab]').forEach(t => {
       const on = t.dataset.board === board;
       t.setAttribute('aria-selected', on);
@@ -121,6 +148,9 @@
     const scale = Math.max(1, top, tiers.length ? tiers[tiers.length - 1].at * 1.04 : 0);
     const pct = v => Math.max(0, Math.min(100, (v / scale) * 100));
     const winners = board === 'week' ? Boards.weekWinners(rows) : [];
+    const place = ranks(rows);
+    $('boardTotal').textContent = sel ? fmtMoney(Boards.total(rows)) : '—';
+    $('totalLabel').textContent = board === 'ancillary' ? 'Team annualized premium' : 'Team total';
 
     if (!rows.length) {
       $('chart').innerHTML = `<p class="empty">${data.pulledAt ? 'No numbers for this period yet.' : 'Waiting for the master workbook…'}</p>`;
@@ -129,10 +159,11 @@
       $('chart').innerHTML = `${tiers.length ? `<div class="lb-marks" aria-hidden="true">${lines}</div>` : ''}
         <div class="lb-rows${tiers.length ? ' has-marks' : ''}">${rows.map(r => {
           const d = describe(r, winners);
-          const badge = winners.includes(r.agent) ? `<span class="lb-badge">★ $${Boards.WEEKLY_BONUS} bonus</span>` : '';
+          const n = place[rows.indexOf(r)];
+          const badge = winners.includes(r.agent) ? `<span class="lb-badge">★ $${Boards.WEEKLY_BONUS}<span class="lb-badge-word"> bonus</span></span>` : '';
           return `<div class="lb-row" tabindex="0" data-tip="${esc([`${r.agent}: ${fmtMoney(r.value)}`, ...d.tip].join('\n'))}"
               aria-label="${esc(`${r.agent}: ${fmtMoney(r.value)}. ${d.status}.${badge ? ` Earns the $${Boards.WEEKLY_BONUS} weekly bonus.` : ''}`)}">
-            <div class="lb-name">${esc(r.agent)}${badge}</div>
+            <div class="lb-name"><span class="lb-rank p${n}" aria-hidden="true">${n}</span><span class="lb-who">${esc(r.agent)}${badge}</span></div>
             <div class="lb-track"><div class="lb-bar ${d.cls}" style="width:${pct(r.value)}%"></div></div>
             <div class="lb-val num">${fmtMoney(r.value)}</div>
             <div class="lb-status">${esc(d.status)}</div>
@@ -219,7 +250,6 @@
 
   if (BOARDS[location.hash.slice(1)]) board = location.hash.slice(1);
   render();
-  api('/api/me').then(me => { $('who').textContent = `Signed in as ${me.email}`; }).catch(() => {});
   load().catch(e => { $('fresh').textContent = e.message; });
   // Pick up scheduled server refreshes (good for a TV left on this page).
   setInterval(() => { if (!document.hidden) load().catch(() => {}); }, 5 * 60000);

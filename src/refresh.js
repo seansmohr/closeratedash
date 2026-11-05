@@ -133,10 +133,13 @@ function snapshot() {
   };
 }
 
+// Public (no sign-in): per-agent totals only. Never add raw rows or client data here.
 function boardsSnapshot() {
+  const today = todayLocal();
   return {
     ...(state.boards || { boards: {}, errors: {} }),
-    today: todayLocal(),
+    today,
+    day: { date: today, rows: Boards.dayTotals(state.prod, today, KPI.AGENTS), source: state.sources.sheet },
     pulledAt: state.sources.master.at,
     refreshing: !!state.refreshing,
     refreshMinutes: config.refreshMinutes,

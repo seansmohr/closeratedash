@@ -140,45 +140,73 @@ table.weekly tbody.wk tr td { border-bottom: 1px solid var(--line); }
 table.weekly .wk-label { font-family: var(--font-display); font-size: .95rem; text-transform: none; letter-spacing: 0; color: var(--ink); white-space: nowrap; vertical-align: top; border-bottom: 1px solid var(--line); }
 table.weekly .pill { margin-top: 0; }
 
-/* Leaderboards: horizontal bars, highest first. Revenue tabs use red/yellow/green;
-   bonus tabs use Borderlands gun rarity, with dashed lines at each bonus point. */
+/* Leaderboards: a "produced today" hero, then one tab per leaderboard. Revenue tabs use
+   red/yellow/green; bonus tabs use Borderlands gun rarity, with dashed lines at each bonus point. */
 :root {
   --bar-red: #d9443c; --bar-yellow: #efbc22; --bar-green: #3a9d4a;
   --r-common: #ffffff; --r-common-edge: #9aabb4;
   --r-uncommon: #3ea34c; --r-rare: #2f6fe0; --r-epic: #8a3fd1; --r-legendary: #e9a516; --r-pearlescent: #5ccbea;
-  --lb-mark: #5d7482;
+  --lb-mark: #5d7482; --lb-groove: #edf2f5;
+  --hero-a: #0f3d57; --hero-b: #117c79; --hero-ink: #ffffff; --hero-soft: rgba(255,255,255,.14);
+  --gold: #e9a516; --silver: #a9b6be; --bronze: #c07a43;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --bar-red: #e5594f; --bar-yellow: #f2c53a; --bar-green: #4fb05c; --r-common: #f2f5f6; --r-common-edge: #f2f5f6; --r-rare: #4a86f0; --r-epic: #a25ce6; --lb-mark: #9db2bd; }
+  :root:not([data-theme="light"]) { --bar-red: #e5594f; --bar-yellow: #f2c53a; --bar-green: #4fb05c; --r-common: #f2f5f6; --r-common-edge: #f2f5f6; --r-rare: #4a86f0; --r-epic: #a25ce6; --lb-mark: #9db2bd; --lb-groove: #1d313c; --hero-a: #0c2f44; --hero-b: #0d5f5c; }
 }
-:root[data-theme="dark"] { --bar-red: #e5594f; --bar-yellow: #f2c53a; --bar-green: #4fb05c; --r-common: #f2f5f6; --r-common-edge: #f2f5f6; --r-rare: #4a86f0; --r-epic: #a25ce6; --lb-mark: #9db2bd; }
-
-.lb-tabs { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); }
-.lb-tabs [role=tab] { background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 12px; margin-bottom: -1px; font-weight: 600; color: var(--muted); }
-.lb-tabs [role=tab][aria-selected=true] { color: var(--ink); border-bottom-color: var(--brand); }
-.lb-tabs [role=tab]:hover { color: var(--ink); }
+:root[data-theme="dark"] { --bar-red: #e5594f; --bar-yellow: #f2c53a; --bar-green: #4fb05c; --r-common: #f2f5f6; --r-common-edge: #f2f5f6; --r-rare: #4a86f0; --r-epic: #a25ce6; --lb-mark: #9db2bd; --lb-groove: #1d313c; --hero-a: #0c2f44; --hero-b: #0d5f5c; }
 a.btn { text-decoration: none; display: inline-block; }
 
-.lb-panel { padding: 18px 16px 14px; display: grid; gap: 14px; }
-.lb-chart { --lb-name: 132px; --lb-val: 96px; --lb-gap: 14px; position: relative; }
-.lb-rows { display: grid; gap: 16px; position: relative; }
+/* Produced today */
+.lb-hero { background: linear-gradient(135deg, var(--hero-a), var(--hero-b)); color: var(--hero-ink); border-radius: 16px; padding: 24px 26px;
+  display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 18px 36px; align-items: center; box-shadow: 0 10px 30px -18px rgba(15,61,87,.7); }
+.lb-hero-main { display: grid; gap: 2px; }
+.lb-hero-label { font: 600 .78rem/1.2 var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.8); }
+.lb-hero-total { font-size: clamp(2.6rem, 7vw, 4.4rem); line-height: 1.05; font-weight: 500; letter-spacing: -.02em; }
+.lb-hero-date { font-size: .9rem; color: rgba(255,255,255,.8); }
+.lb-hero-agents { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.lb-day { background: var(--hero-soft); border-radius: 10px; padding: 12px 14px; display: grid; gap: 4px; }
+.lb-day-name { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; }
+.lb-day-val { font-size: 1.35rem; }
+.lb-day-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.18); overflow: hidden; }
+.lb-day-bar i { display: block; height: 100%; background: #ffffff; border-radius: 3px; }
+.lb-day-empty { margin: 0; color: rgba(255,255,255,.85); }
+.lb-hero-note { grid-column: 1 / -1; margin: 0; font-size: .78rem; color: rgba(255,255,255,.72); }
+
+/* Tabs: a segmented control */
+.lb-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; width: fit-content; max-width: 100%; }
+.lb-tabs [role=tab] { background: none; border: 0; border-radius: 9px; padding: 8px 14px; font-weight: 600; color: var(--muted); }
+.lb-tabs [role=tab]:hover { color: var(--ink); background: var(--brand-soft); }
+.lb-tabs [role=tab][aria-selected=true] { color: var(--surface); background: var(--brand); }
+
+/* One leaderboard */
+.lb-panel { padding: 20px 20px 16px; display: grid; gap: 18px; border-radius: 14px; }
+.lb-total { display: grid; gap: 0; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.lb-total-label { font-size: .74rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.lb-total-num { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; color: var(--ink); letter-spacing: -.02em; }
+.lb-chart { --lb-name: 150px; --lb-val: 104px; --lb-gap: 14px; position: relative; }
+.lb-rows { display: grid; gap: 18px; position: relative; }
 .lb-rows.has-marks { padding-top: 40px; }
-.lb-row { display: grid; grid-template-columns: var(--lb-name) minmax(0, 1fr) var(--lb-val); column-gap: var(--lb-gap); row-gap: 4px; align-items: center; border-radius: 6px; }
+.lb-row { display: grid; grid-template-columns: var(--lb-name) minmax(0, 1fr) var(--lb-val); column-gap: var(--lb-gap); row-gap: 5px; align-items: center; border-radius: 8px; }
 .lb-row:focus-visible { outline-offset: 4px; }
-.lb-name { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; display: grid; gap: 2px; justify-items: start; min-width: 0; overflow-wrap: anywhere; }
-.lb-track { height: 26px; position: relative; }
-.lb-bar { height: 100%; min-width: 3px; border-radius: 0 4px 4px 0; }
-.lb-val { font-size: 1.05rem; text-align: right; white-space: nowrap; }
+.lb-name { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.lb-who { font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; display: grid; gap: 3px; justify-items: start; min-width: 0; overflow-wrap: anywhere; }
+.lb-rank { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font: 500 .85rem/1 var(--font-num);
+  background: var(--brand-soft); color: var(--muted); }
+.lb-rank.p1 { background: var(--gold); color: #2b1d00; } .lb-rank.p2 { background: var(--silver); color: #1b2328; } .lb-rank.p3 { background: var(--bronze); color: #2a1504; }
+.lb-track { height: 32px; position: relative; background: var(--lb-groove); border-radius: 6px; }
+.lb-bar { height: 100%; min-width: 4px; border-radius: 6px; box-shadow: inset 0 -3px 0 rgba(0,0,0,.12); }
+.lb-val { font-size: 1.2rem; text-align: right; white-space: nowrap; }
 .lb-status { grid-column: 2 / 4; font-size: .8rem; color: var(--muted); }
-.lb-badge { font-family: var(--font-body); font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--r-legendary); color: #2b1d00; white-space: nowrap; }
+.lb-badge { font-family: var(--font-body); font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--gold); color: #2b1d00; white-space: nowrap; }
 .c-red { background: var(--bar-red); } .c-yellow { background: var(--bar-yellow); } .c-green { background: var(--bar-green); }
 .r-common { background: var(--r-common); box-shadow: inset 0 0 0 1.5px var(--r-common-edge); }
 .r-uncommon { background: var(--r-uncommon); } .r-rare { background: var(--r-rare); } .r-epic { background: var(--r-epic); }
-.r-legendary { background: var(--r-legendary); } .r-pearlescent { background: var(--r-pearlescent); }
-.r-effervescent { background: linear-gradient(90deg, #ff4d4d, #ffa31a, #ffe11a, #3fd16b, #26b5ff, #7a5cff, #ff4dd2, #ff4d4d); background-size: 200% 100%; }
+.r-legendary { background: var(--r-legendary); box-shadow: 0 0 14px -2px var(--r-legendary); }
+.r-pearlescent { background: var(--r-pearlescent); box-shadow: 0 0 14px -2px var(--r-pearlescent); }
+.r-effervescent { background: linear-gradient(90deg, #ff4d4d, #ffa31a, #ffe11a, #3fd16b, #26b5ff, #7a5cff, #ff4dd2, #ff4d4d); background-size: 200% 100%; box-shadow: 0 0 16px -2px #ff4dd2; }
 @media (prefers-reduced-motion: no-preference) {
   .r-effervescent { animation: lb-shimmer 4s linear infinite; }
-  .lb-bar { transition: width .4s ease; }
+  .lb-bar, .lb-day-bar i { transition: width .5s ease; }
 }
 @keyframes lb-shimmer { to { background-position: -200% 0; } }
 
@@ -187,13 +215,23 @@ a.btn { text-decoration: none; display: inline-block; }
 .lb-mark { position: absolute; top: 0; bottom: 0; border-left: 1.5px dashed var(--lb-mark); }
 .lb-mark span { position: absolute; top: 0; transform: translateX(-50%); font: 500 .72rem/1.2 var(--font-num); color: var(--muted); text-align: center; white-space: nowrap; background: var(--surface); padding: 0 2px; }
 .lb-mark span b { display: block; font-weight: 500; color: var(--ink); }
+.lb-legend { padding-top: 12px; border-top: 1px solid var(--line); }
 .lb-legend i { box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
 .lb-legend i.r-effervescent { animation: none; }
 .lb-tip { position: fixed; z-index: 10; background: var(--ink); color: var(--surface); font-size: .82rem; line-height: 1.4; padding: 8px 10px; border-radius: 6px; white-space: pre-line; pointer-events: none; max-width: 260px; }
 @media (max-width: 640px) {
-  .lb-chart { --lb-name: 78px; --lb-val: 74px; --lb-gap: 8px; }
-  .lb-name { font-size: .95rem; }
-  .lb-val { font-size: .9rem; }
+  .lb-hero { grid-template-columns: 1fr; padding: 20px 18px; }
+  .lb-hero-agents { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+  .lb-day { padding: 10px 12px; }
+  .lb-day-val { font-size: 1.1rem; }
+  .lb-panel { padding: 16px 14px 14px; }
+  .lb-chart { --lb-name: 96px; --lb-val: 74px; --lb-gap: 8px; }
+  .lb-name { gap: 6px; }
+  .lb-rank { width: 22px; height: 22px; font-size: .72rem; }
+  .lb-who { font-size: .95rem; }
+  .lb-badge-word { display: none; }
+  .lb-val { font-size: .95rem; }
+  .lb-track { height: 26px; }
   /* Narrow: just the threshold, staggered over three rows; the legend has the bonus amounts. */
   .lb-mark span { font-size: .66rem; }
   .lb-mark span b { display: none; }

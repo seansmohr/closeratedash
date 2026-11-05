@@ -37,6 +37,21 @@ app.get('/healthz', async (req, res) => {
   catch { res.status(503).json({ ok: false }); }
 });
 
+// Leaderboards: open to anyone with the link, no sign-in (agreed with Sean). They show
+// per-agent revenue totals only, never client data. Registered before sign-in so the
+// password mode's browser prompt doesn't cover them. Everything else still needs sign-in.
+const pub = path.join(__dirname, '..', 'public');
+const open = (req, res, next) => { res.set('X-Robots-Tag', 'noindex, nofollow'); next(); };
+app.get(['/leaderboards', '/leaderboards.html'], open, (req, res) => res.sendFile(path.join(pub, 'leaderboards.html')));
+app.get('/leaderboards.js', open, (req, res) => res.sendFile(path.join(pub, 'leaderboards.js')));
+app.get('/boards.js', open, (req, res) => res.type('application/javascript').sendFile(path.join(__dirname, 'boards.js')));
+app.get('/styles.css', (req, res) => res.sendFile(path.join(pub, 'styles.css')));
+app.get('/api/boards', open, (req, res) => res.json(refresher.boardsSnapshot()));
+app.post('/api/boards/refresh', open, async (req, res) => {
+  await refresher.refresh({ minGapMs: 60000 }); // at most one pull a minute, whoever asks
+  res.json(refresher.boardsSnapshot());
+});
+
 app.use(cookieSession({
   name: 'kpi_session',
   keys: [config.auth.sessionSecret || 'dev-only-secret-not-for-production'],
@@ -47,7 +62,6 @@ app.use(cookieSession({
 }));
 auth.mount(app);
 
-const pub = path.join(__dirname, '..', 'public');
 app.get('/signin', (req, res) => {
   if (req.user) return res.redirect('/');
   res.sendFile(path.join(pub, 'signin.html'));
@@ -66,8 +80,6 @@ app.use('/api', (req, res, next) => {
 });
 
 app.get('/kpi.js', (req, res) => res.type('application/javascript').sendFile(path.join(__dirname, 'kpi.js')));
-app.get('/boards.js', (req, res) => res.type('application/javascript').sendFile(path.join(__dirname, 'boards.js')));
-app.get('/leaderboards', (req, res) => res.sendFile(path.join(pub, 'leaderboards.html')));
 app.use(express.static(pub, { index: 'index.html', maxAge: 0 }));
 
 app.get('/api/me', (req, res) => res.json({ email: req.user.email, name: req.user.name, agents: AGENTS }));
@@ -79,12 +91,6 @@ app.post('/api/refresh', async (req, res) => {
   res.json(refresher.snapshot());
 });
 
-app.get('/api/boards', (req, res) => res.json(refresher.boardsSnapshot()));
-
-app.post('/api/boards/refresh', async (req, res) => {
-  await refresher.refresh({ minGapMs: 60000 });
-  res.json(refresher.boardsSnapshot());
-});
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 function count(v) {

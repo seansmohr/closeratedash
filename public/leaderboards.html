@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mohr Leaderboards</title>
+<meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
@@ -28,8 +29,17 @@
       <a class="btn ghost" href="/">Scorecard</a>
     </div>
   </header>
-  <div class="userbar"><span id="who"></span><a href="/auth/logout">Sign out</a></div>
   <div id="banners"></div>
+
+  <section class="lb-hero" aria-labelledby="todayH">
+    <div class="lb-hero-main">
+      <h2 class="lb-hero-label" id="todayH">Produced today</h2>
+      <div class="lb-hero-total num" id="todayTotal">—</div>
+      <span class="lb-hero-date" id="todayDate"></span>
+    </div>
+    <div class="lb-hero-agents" id="todayAgents"></div>
+    <p class="lb-hero-note" id="todayNote"></p>
+  </section>
 
   <nav class="lb-tabs" role="tablist" aria-label="Leaderboards">
     <button type="button" role="tab" id="tab-year" data-board="year" aria-controls="board">Year</button>
@@ -45,6 +55,7 @@
       <span class="muted" id="boardSub"></span>
     </div>
     <div class="panel lb-panel">
+      <div class="lb-total"><span class="lb-total-label" id="totalLabel">Team total</span><span class="lb-total-num num" id="boardTotal">—</span></div>
       <div class="lb-chart" id="chart"></div>
       <div class="legend lb-legend" id="legend"></div>
     </div>

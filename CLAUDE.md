@@ -42,9 +42,16 @@ dashboard behind Google sign-in (jmohrins.com accounts only).
 
 ## Leaderboards (`/leaderboards`, agreed with Sean)
 
+**Open to anyone with the link, no sign-in** (Sean's call): `/leaderboards`, its scripts and
+`/api/boards` are registered before sign-in in `src/server.js`. They must only ever carry per-agent
+totals, never client data; everything else (the scorecard, daily log, Needs cleanup) keeps sign-in.
+
 Read straight from the master workbook's summary tabs (found by header text), not recomputed.
 Projected revenue except Ancillary. Highest earner on top. Month, week and quarter default to the
-current one with a dropdown for earlier ones.
+current one with a dropdown for earlier ones. Each tab shows the team total big above the bars.
+
+- **Produced today** (top of the page): projected revenue of today's Production Sheet applications
+  (App Date = today in `TIMEZONE`), per agent and in total (`Boards.dayTotals`)
 
 1. **Year**: Agent Production, Projected Rev. Red < $180k, yellow < $240k, green $240k+
 2. **Month**: "<Month> Production <year>" tab, Writing Agent table, Projected Rev. Red < $15k,
