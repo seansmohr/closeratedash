@@ -37,7 +37,7 @@ async function fetchRows() {
 }
 
 // The summary tabs of the master workbook (Agent Production, Weekly & Close
-// Analysis, Quarterly Rev, Premium Production and the month tabs) for the
+// Analysis, Quarterly Rev and the month tabs) for the
 // leaderboards. Returns { [tab title]: rows }. These tabs hold per-agent totals only.
 async function fetchMasterTabs(year) {
   const { tabsToRead } = require('./boards');

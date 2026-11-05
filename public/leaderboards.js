@@ -18,7 +18,6 @@
     month: { title: 'Total revenue this month', tab: 'the month’s Production tab', kind: 'band', period: 'Month' },
     week: { title: 'Total revenue this week', tab: 'Weekly & Close Analysis', kind: 'band', period: 'Week' },
     quarter: { title: 'Quarterly bonus tracker', tab: 'Quarterly Rev', kind: 'tier', period: 'Quarter' },
-    ancillary: { title: 'Annual ancillary premium', tab: 'Premium Production', kind: 'tier' },
   };
   const BAND_NAMES = { red: 'Red', yellow: 'Yellow', green: 'Green' };
 
@@ -140,7 +139,7 @@
     const b = BOARDS[board];
     const sel = selected();
     $('boardH').textContent = b.title;
-    $('boardSub').textContent = sel ? sel.label + (board === 'quarter' ? ' · projected revenue' : board === 'ancillary' ? ' · annualized premium' : ' · projected revenue') : '';
+    $('boardSub').textContent = sel ? sel.label + ' · projected revenue' : '';
 
     const rows = sel ? Boards.rank(sel.rows) : [];
     const tiers = b.kind === 'tier' ? Boards.TIERS[board] : [];
@@ -150,7 +149,6 @@
     const winners = board === 'week' ? Boards.weekWinners(rows) : [];
     const place = ranks(rows);
     $('boardTotal').textContent = sel ? fmtMoney(Boards.total(rows)) : '—';
-    $('totalLabel').textContent = board === 'ancillary' ? 'Team annualized premium' : 'Team total';
 
     if (!rows.length) {
       $('chart').innerHTML = `<p class="empty">${data.pulledAt ? 'No numbers for this period yet.' : 'Waiting for the master workbook…'}</p>`;
@@ -186,7 +184,6 @@
       month: 'From that month’s Production tab of the master workbook (Writing Agent table, Projected Rev).',
       week: 'From the Weekly & Close Analysis tab of the master workbook: projected revenue, Monday-to-Sunday weeks by App Date.',
       quarter: 'From the Quarterly Rev tab of the master workbook, always the Projected table. Dashed lines mark each bonus point.',
-      ancillary: 'From the Premium Production tab of the master workbook: annualized ancillary premium (monthly premium × 12; Med Supp, MA, PDP and IFP excluded). Dashed lines mark each bonus point.',
     }[board];
 
     $('fresh').textContent = data.pulledAt

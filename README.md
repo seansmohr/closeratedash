@@ -41,8 +41,8 @@ Google sign-in client, and the Railway project.
    (`…@….iam.gserviceaccount.com`) as **Viewer**. If Google blocks it, your Workspace admin
    settings restrict sharing outside jmohrins.com; allow it for this address.
 6. Share the **master production workbook** with the same email as **Viewer** too. The
-   Leaderboards page reads its Agent Production, Weekly & Close Analysis, Quarterly Rev, Premium
-   Production and "<Month> Production <year>" tabs.
+   Leaderboards page reads its Agent Production, Weekly & Close Analysis, Quarterly Rev and
+   "<Month> Production <year>" tabs.
 
 The Leaderboards page (`/leaderboards`) needs no sign-in, so the team can open it or leave it on a
 TV. It shows per-agent revenue totals only; the scorecard and daily log still need sign-in.

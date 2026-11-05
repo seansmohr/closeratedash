@@ -80,7 +80,7 @@ function build() {
 
 // The master workbook's summary tabs, laid out like the real ones (header text,
 // helper columns, Total rows), with invented per-agent totals. Picked to show
-// every bar color, a weekly tie and the top ancillary tier.
+// every bar color and a weekly tie.
 function masterTabs(year = new Date().getFullYear()) {
   const $ = n => '$' + Math.round(n).toLocaleString('en-US');
   const agents = ['Sai', 'Sean', 'James'];
@@ -92,14 +92,6 @@ function masterTabs(year = new Date().getFullYear()) {
     ['Sean', '90', '60', '1.5', '$6,000', '$66', $(196400), $(120000)],
     ['James', '40', '28', '1.4', '$3,000', '$75', $(88250), $(40000)],
     ['Agency Total', '340', '218', '1.6', '$23,000', '$67', $(535950), $(330000)],
-  ];
-  tabs['Premium Production'] = [
-    ['Ancillary Premium Production'], ['Year:', String(year)], [], [], ['Annual Summary'],
-    ['Agent', 'Ancillary Policies', 'Monthly Premium Written', 'Annualized Premium (AP)', 'Avg Monthly Premium / Policy', '% of Agency AP'],
-    ['Sai', '180', '$17,000', $(204000), '$94', '61%'],
-    ['Sean', '70', '$8,700', $(104400), '$124', '31%'],
-    ['James', '15', '$2,300', $(27600), '$153', '8%'],
-    ['Agency Total', '265', '$28,000', $(336000), '$106', '100%'],
   ];
   const q = [[52000, 21000, 9000], [96500, 48000, 22000], [131000, 73500, 41000], [18000, 6000, 2500]];
   tabs['Quarterly Rev'] = [

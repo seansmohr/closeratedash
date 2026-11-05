@@ -47,7 +47,7 @@ dashboard behind Google sign-in (jmohrins.com accounts only).
 totals, never client data; everything else (the scorecard, daily log, Needs cleanup) keeps sign-in.
 
 Read straight from the master workbook's summary tabs (found by header text), not recomputed.
-Projected revenue except Ancillary. Highest earner on top. Month, week and quarter default to the
+Projected revenue throughout. Highest earner on top. Month, week and quarter default to the
 current one with a dropdown for earlier ones. Each tab shows the team total big above the bars.
 
 - **Produced today** (top of the page): projected revenue of today's Production Sheet applications
@@ -60,10 +60,9 @@ current one with a dropdown for earlier ones. Each tab shows the team total big 
    Red < $4k, yellow < $5k, green $5k+. Top earner gets a $100 bonus; ties all get it; nobody in a
    $0 week
 4. **Quarterly bonus**: Quarterly Rev, always the Projected Revenue by Quarter table. $70k $1,000
-   (green), $90k $2,000 (blue), $120k $3,000 (purple), $150k $4,000 (gold); below is white
-5. **Ancillary premium**: Premium Production, Annualized Premium (AP). $50k $500 (green), $100k $750
-   (blue), $125k $1,000 (purple), $150k $1,250 (gold), $175k $1,500 (light blue), $200k $1,750
-   (rainbow); below is white. Colors follow Borderlands gun rarity
+   (green), $90k $2,000 (blue), $120k $3,000 (purple), $150k $4,000 (gold); below is white.
+   Colors follow Borderlands gun rarity. (The annualized ancillary premium bonus was dropped in
+   Nov 2026, so there's no tab for it.)
 
 ## Rules
 

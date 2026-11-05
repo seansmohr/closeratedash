@@ -4,8 +4,7 @@
 // bands, tiers and ranking). Keep it dependency-free.
 //
 // The tabs are found by their header text, not fixed cells, so moved rows or a
-// new agent column don't break anything. Every number is projected revenue,
-// except Ancillary, which is annualized ancillary premium (AP).
+// new agent column don't break anything. Every number is projected revenue.
 (function (root, factory) {
   const Boards = factory();
   if (typeof module === 'object' && module.exports) module.exports = Boards;
@@ -15,7 +14,6 @@
     year: 'Agent Production',
     week: 'Weekly & Close Analysis',
     quarter: 'Quarterly Rev',
-    ancillary: 'Premium Production',
   };
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const MONTH_TAB = /^\s*([A-Za-z]+)\s+Production\s+(\d{4})\s*$/;
@@ -34,18 +32,10 @@
       { at: 120000, bonus: 3000, rarity: 'epic' },
       { at: 150000, bonus: 4000, rarity: 'legendary' },
     ],
-    ancillary: [
-      { at: 50000, bonus: 500, rarity: 'uncommon' },
-      { at: 100000, bonus: 750, rarity: 'rare' },
-      { at: 125000, bonus: 1000, rarity: 'epic' },
-      { at: 150000, bonus: 1250, rarity: 'legendary' },
-      { at: 175000, bonus: 1500, rarity: 'pearlescent' },
-      { at: 200000, bonus: 1750, rarity: 'effervescent' },
-    ],
   };
   const RARITY_NAMES = {
     common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic',
-    legendary: 'Legendary', pearlescent: 'Pearlescent', effervescent: 'Effervescent',
+    legendary: 'Legendary',
   };
   const WEEKLY_BONUS = 100;
 
@@ -133,7 +123,6 @@
     return { year: yearOf(rows), rows: agentRows(rows, h, col) };
   }
   const parseYear = rows => parseAgentTable(rows, TABS.year, /^\s*projected rev\s*$/i);
-  const parseAncillary = rows => parseAgentTable(rows, TABS.ancillary, /annualized/i);
 
   function parseMonthTab(rows, tab) {
     const h = findHeader(rows, 'writing agent', /^\s*projected rev\s*$/i);
@@ -212,10 +201,6 @@
       const p = parseQuarters(rows);
       return p.quarters.map(q => ({ key: `Q${q.quarter}`, year: p.year || year, quarter: q.quarter, rows: q.rows }));
     });
-    attempt('ancillary', TABS.ancillary, rows => {
-      const p = parseAncillary(rows);
-      return { label: String(p.year || year), rows: p.rows };
-    });
 
     const months = [];
     const monthErrors = [];
@@ -239,6 +224,6 @@
   }
 
   return { TABS, MONTHS, BANDS, TIERS, RARITY_NAMES, WEEKLY_BONUS, band, tier, rank, weekWinners, dayTotals, total,
-    money, monthOfTab, addDays, parseYear, parseAncillary, parseMonthTab, parseWeeks, parseQuarters,
+    money, monthOfTab, addDays, parseYear, parseMonthTab, parseWeeks, parseQuarters,
     parseWorkbook, tabsToRead };
 });

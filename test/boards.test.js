@@ -31,18 +31,6 @@ test('quarterly tiers: white, green, blue, purple, gold', () => {
   assert.equal(top.next, null);
 });
 
-test('ancillary tiers run up to effervescent at $200k', () => {
-  const at = v => { const t = Boards.tier(v, 'ancillary'); return [t.rarity, t.bonus]; };
-  assert.deepEqual(at(49999), ['common', 0]);
-  assert.deepEqual(at(50000), ['uncommon', 500]);
-  assert.deepEqual(at(100000), ['rare', 750]);
-  assert.deepEqual(at(133915), ['epic', 1000]);
-  assert.deepEqual(at(150000), ['legendary', 1250]);
-  assert.deepEqual(at(175000), ['pearlescent', 1500]);
-  assert.deepEqual(at(200000), ['effervescent', 1750]);
-  assert.equal(Boards.tier(133915, 'ancillary').next.need, 16085);
-});
-
 test('weekly bonus: the top earner, everyone tied for the top, nobody in a $0 week', () => {
   assert.deepEqual(Boards.weekWinners([{ agent: 'Sai', value: 5000 }, { agent: 'Sean', value: 300 }]), ['Sai']);
   assert.deepEqual(Boards.weekWinners([{ agent: 'Sai', value: 4800 }, { agent: 'Sean', value: 4800 }, { agent: 'James', value: 10 }]), ['Sai', 'Sean']);
@@ -62,7 +50,7 @@ test('month tab names map to months; other tabs are ignored', () => {
   assert.equal(Boards.monthOfTab('Agent Production'), null);
   assert.deepEqual(Boards.tabsToRead(['Agent Production', 'Production Sheet', 'Oct Production 2026', 'Oct Production 2025', 'Retention',
     'Quarterly Rev', 'Premium Production', 'Weekly & Close Analysis'], 2026),
-  ['Agent Production', 'Oct Production 2026', 'Quarterly Rev', 'Premium Production', 'Weekly & Close Analysis']);
+  ['Agent Production', 'Oct Production 2026', 'Quarterly Rev', 'Weekly & Close Analysis']);
 });
 
 test('parses every board from the workbook layout', async () => {
@@ -71,7 +59,7 @@ test('parses every board from the workbook layout', async () => {
   const p = Boards.parseWorkbook(tabs, year);
   assert.deepEqual(p.errors, {});
   assert.deepEqual(p.boards.year.rows, [{ agent: 'Sai', value: 251300 }, { agent: 'Sean', value: 196400 }, { agent: 'James', value: 88250 }]);
-  assert.deepEqual(p.boards.ancillary.rows.map(r => r.value), [204000, 104400, 27600]);
+  assert.equal(p.boards.ancillary, undefined);
   assert.equal(p.boards.month.length, 12);
   assert.equal(p.boards.month[0].key, `${year}-01`);
   assert.deepEqual(p.boards.month[0].rows.map(r => r.agent), ['Sai', 'Sean', 'James']);
