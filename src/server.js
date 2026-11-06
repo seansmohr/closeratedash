@@ -63,7 +63,7 @@ app.use(cookieSession({
 auth.mount(app);
 
 app.get('/signin', (req, res) => {
-  if (req.user) return res.redirect('/');
+  if (req.user || config.auth.mode === 'open') return res.redirect('/');
   res.sendFile(path.join(pub, 'signin.html'));
 });
 app.get('/signin.css', (req, res) => res.sendFile(path.join(pub, 'styles.css')));
@@ -82,7 +82,7 @@ app.use('/api', (req, res, next) => {
 app.get('/kpi.js', (req, res) => res.type('application/javascript').sendFile(path.join(__dirname, 'kpi.js')));
 app.use(express.static(pub, { index: 'index.html', maxAge: 0 }));
 
-app.get('/api/me', (req, res) => res.json({ email: req.user.email, name: req.user.name, agents: AGENTS }));
+app.get('/api/me', (req, res) => res.json({ email: req.user.email, name: req.user.name, agents: AGENTS, signIn: config.auth.mode !== 'open' }));
 
 app.get('/api/data', (req, res) => res.json(refresher.snapshot()));
 

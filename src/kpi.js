@@ -120,7 +120,7 @@
       if (full.startsWith('(Example)')) continue;
       const cf = Object.fromEntries((c.customFields || []).map(x => [x.id, x.value]));
       const webinar = String(cf[F_WEBINAR] || '').slice(0, 10) || null;
-      out.push({ agent: AGENT_BY_ID[c.assignedTo] || 'Unassigned', kind: 'sale',
+      out.push({ agent: AGENT_BY_ID[c.assignedTo] || 'Unassigned', kind: 'sale', contactId: c.id || null,
         keys: [phoneKey(c.phone), nameKey(first, last)].filter(Boolean),
         date: (webinar || String(c.dateUpdated || '').slice(0, 10)) || null, label: full, status });
     }
@@ -185,6 +185,11 @@
 
   // Drop client names for GoHighLevel sales that matched the sheet; only the
   // unmatched ones are shown (in the cleanup list), so only they need a name.
+  // For a page with no sign-in: the same records without client names.
+  function hideNames(ghl) {
+    return ghl.map(g => (g.label === undefined ? g : { ...g, label: undefined }));
+  }
+
   function stripMatchedLabels(prod, ghl) {
     const sold = new Set(prod.flatMap(c => c.keys));
     return ghl.map(g => (g.label && g.keys.some(k => sold.has(k)) ? { ...g, label: undefined } : g));
@@ -249,7 +254,7 @@
     for (const g of ghl || []) {
       // Marked Sale in GoHighLevel but not on the Production Sheet: not a close; flagged.
       if (g.kind !== 'sale' || !inRange(g.date, from, to) || g.keys.some(k => soldKeys.has(k))) continue;
-      missing.push({ agent: g.agent, name: g.label, status: g.status, date: g.date });
+      missing.push({ agent: g.agent, name: g.label, contactId: g.contactId, status: g.status, date: g.date });
     }
     const rows = Object.values(byAgent).map(({ clientSet, ...a }) => {
       const closes = a.sheetClients;
@@ -305,5 +310,5 @@
 
   return { AGENTS, AGENT_BY_ID, F_STATUS, F_WEBINAR, parseCsv, normalizeProd, normalizeProdRows, normalizeGhl,
     normalizeAppointments, addSheetSales, localDate,
-    stripMatchedLabels, compute, weekly, months, money, usDate, mondayOf, addDays };
+    stripMatchedLabels, hideNames, compute, weekly, months, money, usDate, mondayOf, addDays };
 });

@@ -161,10 +161,18 @@
       ? `${Math.round((totalBlank / totalHeld) * 100)}% of held appointments in this period were never marked: still Confirmed on the calendar with a blank Appointment Status, so some are no-shows nobody marked. The more the team marks Showed or No Show, the more accurate show rate and close rate get.`
       : '';
 
-    // Needs cleanup
+    // Needs cleanup. Without sign-in the server sends no names, so link to the contact instead
+    // (GoHighLevel asks for its own login).
+    const cleanupWho = x => {
+      const link = x.contactId && data.ghlLocation
+        ? `<a href="https://app.gohighlevel.com/v2/location/${encodeURIComponent(data.ghlLocation)}/contacts/detail/${encodeURIComponent(x.contactId)}" target="_blank" rel="noopener noreferrer">Open in GoHighLevel</a>`
+        : '';
+      if (x.name) return esc(x.name) + (link ? ` (${link})` : '');
+      return link || 'Contact (name hidden)';
+    };
     const miss = missing.filter(x => KPI.AGENTS.includes(x.agent));
     let html = '';
-    if (miss.length) html += `<div><p><strong>${miss.length} contact${miss.length > 1 ? 's are' : ' is'} still marked Sale in GoHighLevel but ${miss.length > 1 ? 'aren’t' : 'isn’t'} on the Production Sheet.</strong> They aren’t counted as closes. If one is an active client, add it to the sheet; if it cancelled, change its Appointment Status.</p><ul>${miss.map(x => `<li>${esc(x.name)} · ${x.agent} · ${esc(x.status)}</li>`).join('')}</ul></div>`;
+    if (miss.length) html += `<div><p><strong>${miss.length} contact${miss.length > 1 ? 's are' : ' is'} still marked Sale in GoHighLevel but ${miss.length > 1 ? 'aren’t' : 'isn’t'} on the Production Sheet.</strong> They aren’t counted as closes. If one is an active client, add it to the sheet; if it cancelled, change its Appointment Status.</p><ul>${miss.map(x => `<li>${cleanupWho(x)} · ${x.agent} · ${esc(x.status)}${x.date ? ` · ${esc(x.date)}` : ''}</li>`).join('')}</ul></div>`;
     $('cleanup').innerHTML = html || '<p>Nothing to clean up in this period.</p>';
 
     // Daily log entries
@@ -238,7 +246,10 @@
     finally { $('saveBtn').disabled = false; }
   });
 
-  api('/api/me').then(me => { $('who').textContent = `Signed in as ${me.email}`; }).catch(() => {});
+  api('/api/me').then(me => {
+    if (me.signIn === false) document.querySelector('.userbar').hidden = true;
+    else $('who').textContent = `Signed in as ${me.email}`;
+  }).catch(() => {});
   loadData().catch(e => { $('fresh').textContent = e.message; });
   loadDaily();
   // Pick up scheduled server refreshes and other people's log entries.

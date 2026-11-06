@@ -224,3 +224,17 @@ test('an application matches a same-day appointment by phone; otherwise it adds 
   assert.deepEqual([sai.closes, sai.cancelled, sai.held, sai.sheetOnly, sai.noShow], [4, 1, 6, 2, 0]);
   assert.deepEqual([james.closes, james.held, james.closeRate], [1, 1, 1]);
 });
+
+test('hideNames drops client names but keeps the GoHighLevel contact id', () => {
+  const ghl = KPI.normalizeGhl([withId('c9', contact('Ann', 'Lee', '+15551110001', SAI, 'Sale (MA)', '2026-09-01'))]);
+  assert.equal(ghl[0].label, 'Ann Lee');
+  assert.equal(ghl[0].contactId, 'c9');
+  const hidden = KPI.hideNames(ghl);
+  assert.equal(hidden[0].label, undefined);
+  assert.equal(hidden[0].contactId, 'c9');
+  assert.equal(ghl[0].label, 'Ann Lee'); // the original is untouched
+  const { missing } = KPI.compute([], hidden, [], null, null);
+  assert.equal(missing.length, 1);
+  assert.equal(missing[0].name, undefined);
+  assert.equal(missing[0].contactId, 'c9');
+});

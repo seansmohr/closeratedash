@@ -2,7 +2,7 @@
 // Raw contacts and sheet rows are never written to disk: only the normalized
 // records (hashed match keys, agent, dates, dollar amounts, outcome) are kept.
 // Calendar events are reduced to agent + appointment day + outcome.
-const { config, todayLocal } = require('./config');
+const { config, todayLocal, showClientNames } = require('./config');
 const KPI = require('./kpi');
 const Boards = require('./boards');
 
@@ -123,7 +123,8 @@ function startSchedule() {
 function snapshot() {
   return {
     prod: state.prod,
-    ghl: state.ghl,
+    ghl: showClientNames() ? state.ghl : KPI.hideNames(state.ghl),
+    ghlLocation: config.ghl.locationId,
     appts: state.appts,
     pulledAt: state.pulledAt,
     refreshing: !!state.refreshing,

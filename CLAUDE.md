@@ -2,7 +2,8 @@
 
 Per-agent sales KPIs for Mohr Insurance Services. A Node/Express app on Railway that pulls
 GoHighLevel contacts, the GoHighLevel calendar and the Production Sheet every 15 minutes, computes the KPIs, and serves a
-dashboard behind Google sign-in (jmohrins.com accounts only).
+dashboard. **No sign-in** (Sean's call, Nov 2026): with no password or Google settings it runs in
+"open" mode, and client names are kept out of everything it sends.
 
 ## Commands
 
@@ -22,8 +23,9 @@ dashboard behind Google sign-in (jmohrins.com accounts only).
   bonus-tier rules. UMD-wrapped like `kpi.js`, served at `/boards.js`. Page: `public/leaderboards.*`
 - `src/refresh.js`: scheduled pull; keeps the last good data per source in memory
 - `src/store.js`: Postgres `daily_log` table (manual calls and confirmation counts)
-- `src/auth.js`: Google OAuth, restricted to `ALLOWED_DOMAIN`; or one shared password (HTTP Basic)
-  when `DASHBOARD_PASSWORD` is set
+- `src/auth.js`: "open" (the default: no sign-in), or one shared password (HTTP Basic) when
+  `DASHBOARD_PASSWORD` is set, or Google OAuth restricted to `ALLOWED_DOMAIN` when
+  `GOOGLE_CLIENT_ID` is set
 - `public/`: `index.html`, `app.js`, `styles.css`, sign-in page
 - `test/fixtures/demo.js`: invented demo data. Never put real client data in the repo.
 
@@ -42,9 +44,9 @@ dashboard behind Google sign-in (jmohrins.com accounts only).
 
 ## Leaderboards (`/leaderboards`, agreed with Sean)
 
-**Open to anyone with the link, no sign-in** (Sean's call): `/leaderboards`, its scripts and
-`/api/boards` are registered before sign-in in `src/server.js`. They must only ever carry per-agent
-totals, never client data; everything else (the scorecard, daily log, Needs cleanup) keeps sign-in.
+**Open to anyone with the link, no sign-in, in every mode** (Sean's call): `/leaderboards`, its
+scripts and `/api/boards` are registered before sign-in in `src/server.js`. They must only ever
+carry per-agent totals, never client data.
 
 Read straight from the master workbook's summary tabs (found by header text), not recomputed.
 Projected revenue throughout. Highest earner on top. Month, week and quarter default to the
@@ -103,7 +105,8 @@ current one with a dropdown for earlier ones. Each tab shows the team total big 
 GoHighLevel is HIPAA-flagged. Raw contacts, calendar events and sheet rows stay in memory only (the leaderboard
 tabs hold per-agent totals only); the app keeps
 hashed match keys, dates, dollar amounts and outcomes. Client names reach the browser only for the
-Needs cleanup list. Postgres holds only the daily log. Don't log contact data.
+Needs cleanup list, and only when a sign-in is set up (`showClientNames()`); in open mode the server
+strips them (`KPI.hideNames`) and the list links to each GoHighLevel contact by id instead. Postgres holds only the daily log. Don't log contact data.
 
 ## Key ids
 

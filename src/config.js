@@ -32,9 +32,11 @@ const config = {
   },
 
   auth: {
-    // "google", "password" or "dev". Setting DASHBOARD_PASSWORD picks "password": one shared
-    // password the browser asks for. dev skips sign-in and is refused in production.
-    mode: env.AUTH_MODE || (env.DASHBOARD_PASSWORD ? 'password' : 'google'),
+    // "open", "password", "google" or "dev". With nothing set it's "open": no sign-in at all
+    // (Sean's call), and client names are kept off the page. DASHBOARD_PASSWORD picks
+    // "password" (one shared password the browser asks for); GOOGLE_CLIENT_ID picks "google".
+    // dev skips sign-in with demo data and is refused in production.
+    mode: env.AUTH_MODE || (env.DASHBOARD_PASSWORD ? 'password' : env.GOOGLE_CLIENT_ID ? 'google' : 'open'),
     password: env.DASHBOARD_PASSWORD || '',
     clientId: env.GOOGLE_CLIENT_ID || '',
     clientSecret: env.GOOGLE_CLIENT_SECRET || '',
@@ -46,6 +48,9 @@ const config = {
   databaseUrl: env.DATABASE_URL || '',
   databaseSsl: env.PGSSL === 'true',
 };
+
+// Client names (the Needs cleanup list) only go to signed-in users, never on an open page.
+const showClientNames = () => config.auth.mode !== 'open';
 
 function assertConfig() {
   const problems = [];
@@ -74,4 +79,4 @@ function todayLocal() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: config.timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 }
 
-module.exports = { config, assertConfig, todayLocal };
+module.exports = { config, assertConfig, todayLocal, showClientNames };

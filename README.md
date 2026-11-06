@@ -44,8 +44,11 @@ Google sign-in client, and the Railway project.
    Leaderboards page reads its Agent Production, Weekly & Close Analysis, Quarterly Rev and
    "<Month> Production <year>" tabs.
 
-The Leaderboards page (`/leaderboards`) needs no sign-in, so the team can open it or leave it on a
-TV. It shows per-agent revenue totals only; the scorecard and daily log still need sign-in.
+No sign-in is needed: with no `DASHBOARD_PASSWORD` or Google sign-in settings, anyone with the link
+can open the dashboard, the daily log and the Leaderboards (`/leaderboards`, handy on a TV). In
+that mode client names never leave the server; the Needs cleanup list links to each contact in
+GoHighLevel instead, which asks for its own login. Set `DASHBOARD_PASSWORD` (or the Google
+settings) to bring sign-in back; the Leaderboards stay open either way.
 
 If the dashboard ever shows the sheet as empty, the IMPORTRANGE mirror hasn't loaded. You can skip
 the mirror: share the master workbook with the service account instead and set

@@ -8,6 +8,13 @@ function oauthClient() {
 }
 
 function mount(app) {
+  if (config.auth.mode === 'open') {
+    // No sign-in: anyone with the link gets in. The server leaves client names out.
+    app.use((req, res, next) => { req.user = { email: 'team', name: 'team' }; next(); });
+    app.get('/auth/logout', (req, res) => res.redirect('/'));
+    return;
+  }
+
   if (config.auth.mode === 'dev') {
     console.warn('AUTH_MODE=dev: sign-in is skipped. Never use this in production.');
     app.use((req, res, next) => { req.user = { email: 'dev@localhost', name: 'Local dev' }; next(); });
